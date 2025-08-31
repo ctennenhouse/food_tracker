@@ -19,7 +19,7 @@ Clicking the default button will auto-fill a link to pollinations.ai which doesn
 - Enter you daily calorie target. Reasonable macronutrient target are auto-computed. 
 - Nutrition goals are optional and can be entered in plain English.
 - `Use local cache for previous foods` will check previously entered food items and populate the calories and macros without using the LLM, so check this if you enter the same item often.
-- Make sure to save your API settings.
+- Make sure to save your API settings, but remember your API Key will be saved here in plaintext, so don't share it with **anyone**.
 - Anything you add in `Morning Food Automation` will be added to your daily food diary once per day when you open the app.
 - `Data Management`
   - Settings and your record of food items are stored locally in your browser. There is no server, no data is shared. So if you clear your browser's cache then it's all gone.
