@@ -41,7 +41,9 @@
 
     <div id="main-app-container" class="flex-1 p-4 sm:p-6 lg:p-8">
         
+        <!--
         <header class="bg-white p-4 sm:p-6 rounded-3xl shadow-lg mb-6 sticky top-0 z-10 border-b-4 border-emerald-500">
+        --->
             <div class="flex items-center justify-between">
                 <h1 class="flex-1 text-2xl sm:text-3xl font-bold text-center text-emerald-600 mb-4">
                     Nutrition Tracker
@@ -122,7 +124,9 @@
                 </div>
 
             </div>
+        <!--    
         </header>
+		-->
 
         <div class="bg-white p-4 sm:p-6 rounded-3xl shadow-lg mb-6">
             <div class="flex flex-col sm:flex-row gap-4 items-center">
@@ -313,7 +317,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Global Variables and Constants ---
-            const APP_VERSION = '3.2';
+            const APP_VERSION = '3.3';
             //const DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
             const DEFAULT_API_URL = "https://text.pollinations.ai";
             
@@ -1320,14 +1324,19 @@ const updateMacroPieChart = (historicalData) => {
                 const allPendingItems = [];
                 for (const date in allFoodEntries) {
                     allPendingItems.push(...allFoodEntries[date].filter(item => item.isPending));
+                
                 }
+                
                 
                 if (allPendingItems.length === 0) {
-                    showMessage("No pending items to process.");
+                    // showMessage("No pending items to process.");
                     return;
+				} else {
+					showMessage(`Processing ${allPendingItems.length} pending item(s)...`, 5000);                    
                 }
                 
-                showMessage(`Processing ${allPendingItems.length} pending item(s)...`, 5000);
+                
+                
 
                 for (const item of allPendingItems) {
                     try {
@@ -1375,7 +1384,7 @@ const updateMacroPieChart = (historicalData) => {
                     updateTotals();
                     showMessage(`Processed ${processedCount} item(s) successfully!`, 3000);
                 } else {
-                    showMessage('No pending items could be processed at this time.', 3000);
+                    //showMessage('No pending items could be processed at this time.', 3000);
                 }
             };
 

@@ -7,7 +7,8 @@ Clicking the default button will auto-fill a link to pollinations.ai which doesn
 - Click through to see previous days
 - Daily counts and targets are displayed. If you use Macrodroid or Tasker then you can grab the screen contents easily.
 - Enter any food item in plain English, e.g .`a small bowl of cereal with milk`, `2 slices of bacon`, `a very greasy slice of cheese pizza`, `35g grilled chicken breast` and either click `Add Item` or just enter on your keyboard.
-- The item is immediately listed as `pending` and a call is made to the LLM API to fill out the calories and macros.
+- You can also submit multiple items separated by commas as a single entry, like `3 pancakes, a cheeseburger, four tacos, and a diet coke`, though the data returned will be less accurate.
+- The entry is immediately listed as `pending` and a call is made to the LLM API to fill out the calories and macros.
 - If an item seems stuck as `pending` you can click it to try again.
 - If there are data errors - either the LLM isn't returning properl formed data or your connection is weak - then you can edit an item to manually add data.
 - If you change the name of a previously added food item then it's re-sent to the LLM for recalculation.
