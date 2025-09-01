@@ -156,7 +156,7 @@
     </div>
 
     <div id="settings-page" class="hidden flex-1 p-4 sm:p-6 lg:p-8 bg-gray-100">
-        <div class="bg-white p-6 rounded-3xl shadow-lg w-full max-w-4xl mx-auto overflow-y-auto max-h-[90vh]">
+        <div class="bg-white p-6 rounded-3xl shadow-lg overflow-y-auto max-h-[90vh]">
             <h2 class="text-2xl font-bold mb-4 text-emerald-600">Settings</h2>
 
             <div class="mb-6">
@@ -207,7 +207,7 @@
                     </button>
                 </div>
                 <label for="api-url-input" class="block text-sm font-medium text-gray-700">New API URL</label>
-                <input type="text" id="api-url-input" class="w-full p-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200" value="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent">
+                <input type="text" id="api-url-input" autocomplete="off" class="w-full p-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200" value="https://text.pollinations.ai">
                 
                 <p class="text-sm text-gray-600 mb-2 mt-4">
                     <strong class="text-gray-900">Current API Key:</strong> <span id="current-api-key" class="break-words">Not Set</span>
@@ -920,7 +920,9 @@
                 goalsInput.value = userGoals;
 
                 // Update API settings display
-                apiUrlInput.placeholder = DEFAULT_API_URL;
+                console.log(API_URL);
+                //apiUrlInput.placeholder = API_URL; //DEFAULT_API_URL;
+                apiUrlInput.value = API_URL; 
                 const apiKeyDisplay = API_KEY ? '********' : 'Not Set';
                 currentApiKeyEl.textContent = apiKeyDisplay;
 
@@ -1919,13 +1921,16 @@ const updateMacroPieChart = (historicalData) => {
             
             // Save API settings button listener
             saveApiSettingsBtn.addEventListener('click', () => {
+                console.log('Save button clicked!'); // Add this line
                 const newApiUrl = apiUrlInput.value.trim();
                 const newApiKey = apiKeyInput.value.trim();
                 const newUseCache = useCacheCheckbox.checked;
+                console.log(newApiUrl);
                 
                 if (newApiUrl) {
                     API_URL = newApiUrl;
                     localStorage.setItem('apiUrl', API_URL);
+                    console.log(API_URL);
                 }
                 
                 if (newApiKey) {
@@ -1939,6 +1944,7 @@ const updateMacroPieChart = (historicalData) => {
 
                 updateSettingsUI();
                 showMessage('API settings saved!');
+                console.log(`Saved API settings`);
             });
 
             // "Default URL" button listener
