@@ -317,7 +317,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Global Variables and Constants ---
-            const APP_VERSION = '3.3';
+            const APP_VERSION = '3.4';
             //const DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
             const DEFAULT_API_URL = "https://text.pollinations.ai";
             
@@ -883,6 +883,7 @@
                 mainAppContainer.classList.remove('hidden');
                 settingsPage.classList.add('hidden');
                 analysisPage.classList.add('hidden');
+                updateNextDayButtonState();
             };
             
             /** Shows the settings page and hides others. */
@@ -1460,6 +1461,21 @@ const updateMacroPieChart = (historicalData) => {
                 processPendingItems();                
             };
             
+			const updateNextDayButtonState = () => {
+							const today = new Date();
+							const isToday = formatDate(currentDate) === formatDate(today);
+							
+							currentDateEl.textContent = formatDisplayDate(currentDate);
+							
+							if (isToday) {
+								nextDayBtn.disabled = true;
+								nextDayBtn.classList.add('opacity-0', 'cursor-not-allowed');
+							} else {
+								nextDayBtn.disabled = false;
+								nextDayBtn.classList.remove('opacity-0', 'cursor-not-allowed');
+							}
+						};            
+            
 			/** Handles adding a new food item, including API call. */
 			const handleAddItem = async (foodText) => {
 				const foodQuery = foodText
@@ -1839,6 +1855,7 @@ const updateMacroPieChart = (historicalData) => {
                 currentDateEl.textContent = formatDisplayDate(currentDate);
                 renderFoodList();
                 updateTotals();
+                updateNextDayButtonState();
             });
 
             nextDayBtn.addEventListener('click', () => {
@@ -1846,6 +1863,7 @@ const updateMacroPieChart = (historicalData) => {
                 currentDateEl.textContent = formatDisplayDate(currentDate);
                 renderFoodList();
                 updateTotals();
+                updateNextDayButtonState();
             });
 
             // Goals input listener to save changes instantly
