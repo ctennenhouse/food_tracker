@@ -528,13 +528,32 @@
 			cameraBtn.addEventListener('click', startCamera);
 			
 			// Event listener for the cancel button
-			cancelPhotoBtn.addEventListener('click', stopCamera);
+			cancelPhotoBtn.addEventListener('click', () => {
+				// Reset the camera modal to close it and clean up the UI
+				resetCameraModal();
+			});
 			
 			// Event listener to swap cameras
 			swapCameraBtn.addEventListener('click', () => {
 				facingMode = facingMode === 'environment' ? 'user' : 'environment';
 				startCamera();
 			});
+			
+			/**
+			 * Stops the camera stream and resets the modal UI state.
+			 */
+			function resetCameraModal() {
+				if (currentStream) {
+					currentStream.getTracks().forEach(track => track.stop());
+					currentStream = null;
+				}
+				
+				// Resetting the UI elements
+				cameraModal.style.display = 'none';
+				video.style.display = 'block'; // Ensure video is visible for the next session
+				photoCanvas.style.display = 'none'; // Ensure canvas is hidden
+				takePhotoBtn.disabled = false; // Re-enable the button
+			}			
 			
 			
 			/**
@@ -661,8 +680,8 @@ takePhotoBtn.addEventListener('click', async () => {
 					showMessage("No valid data returned from image scan. Please try again or enter manually.");
 				}
 				
-				// Stop the camera and close the modal
-				stopCamera();
+				// Reset the camera modal after the process is complete
+				resetCameraModal();
 			});
 
        
