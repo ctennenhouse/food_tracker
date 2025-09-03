@@ -2128,10 +2128,12 @@ const updateMacroPieChart = (historicalData) => {
 
 			// Main "Add Item" button listener
 			addItemBtn.addEventListener('click', async () => {
-				// 1. First, handle the primary task of adding the food item.
+				// handle the primary task of adding the food item.
 				await handleAddItem(foodInput.value);
+				// clear the text box
+				foodInput.value = '';
 			
-				// 2. Once the item is processed and the total is updated, get the final value.
+				// Once the item is processed and the total is updated, get the final value.
 				const finalTotalCalories = document.getElementById('total-calories').innerText;
 			});
 
