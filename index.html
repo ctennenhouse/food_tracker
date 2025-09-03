@@ -516,13 +516,16 @@
 				}
 			}
 			
+			/*
 			// Function to stop the camera stream
+			// replaced with resetCameraModal
 			function stopCamera() {
 				if (currentStream) {
 					currentStream.getTracks().forEach(track => track.stop());
 				}
 				cameraModal.style.display = 'none';
 			}
+			*/
 			
 			// Event listener for the camera button
 			cameraBtn.addEventListener('click', startCamera);
@@ -608,13 +611,13 @@
 						newEntry.carbs = nutritionData.carbs;
 						newEntry.isPending = false;
 			
-						showMessage(`${newEntry.text} added!`);
+						showMessage(`${newEntry.text} added!`,2000);
 					} else {
 						throw new Error("Invalid nutrition data received from API.");
 					}
 				} catch (e) {
 					console.error('Failed to process API response:', e);
-					showMessage(`Item "${originalFoodText}" saved as pending.`, 5000);
+					showMessage(`Item "${originalFoodText}" saved as pending.`, 2000);
 				}
 				
 				// Update the UI
@@ -624,69 +627,69 @@
 			};
 			
 			
-// Event listener for taking a photo
-takePhotoBtn.addEventListener('click', async () => {
-    // Disable the button to prevent multiple clicks
-    takePhotoBtn.disabled = true;
-
-    // Calculate dimensions to fit the photo within a reasonable size (e.g., max 400px width for the output)
-    const maxWidth = 400; // Max width for the captured image within the modal
-    const aspectRatio = video.videoWidth / video.videoHeight;
-    
-    let newWidth = video.videoWidth;
-    let newHeight = video.videoHeight;
-
-    if (newWidth > maxWidth) {
-        newWidth = maxWidth;
-        newHeight = newWidth / aspectRatio;
-    }
-
-    // Set canvas dimensions to the calculated size
-    photoCanvas.width = newWidth;
-    photoCanvas.height = newHeight;
-
-    // Draw the current video frame to the canvas, scaled
-    const context = photoCanvas.getContext('2d');
-    context.drawImage(video, 0, 0, newWidth, newHeight); // Draw at the new scaled dimensions
-
-    // Freeze the image by hiding the video and showing the canvas
-    video.style.display = 'none';
-    photoCanvas.style.display = 'block';
-    photoCanvas.style.maxWidth = '100%'; // Ensure it respects parent container width
-    photoCanvas.style.height = 'auto'; // Maintain aspect ratio
-
-
-    // Get the image data as a base64 encoded string
-    const imageData = photoCanvas.toDataURL('image/jpeg');
-
-
+			// Event listener for taking a photo
+			takePhotoBtn.addEventListener('click', async () => {
+				// Disable the button to prevent multiple clicks
+				takePhotoBtn.disabled = true;
+			
+				// Calculate dimensions to fit the photo within a reasonable size (e.g., max 400px width for the output)
+				const maxWidth = 400; // Max width for the captured image within the modal
+				const aspectRatio = video.videoWidth / video.videoHeight;
+				
+				let newWidth = video.videoWidth;
+				let newHeight = video.videoHeight;
+			
+				if (newWidth > maxWidth) {
+					newWidth = maxWidth;
+					newHeight = newWidth / aspectRatio;
+				}
+			
+				// Set canvas dimensions to the calculated size
+				photoCanvas.width = newWidth;
+				photoCanvas.height = newHeight;
+			
+				// Draw the current video frame to the canvas, scaled
+				const context = photoCanvas.getContext('2d');
+				context.drawImage(video, 0, 0, newWidth, newHeight); // Draw at the new scaled dimensions
+			
+				// Freeze the image by hiding the video and showing the canvas
+				video.style.display = 'none';
+				photoCanvas.style.display = 'block';
+				photoCanvas.style.maxWidth = '100%'; // Ensure it respects parent container width
+				photoCanvas.style.height = 'auto'; // Maintain aspect ratio
+			
+			
+				// Get the image data as a base64 encoded string
+				const imageData = photoCanvas.toDataURL('image/jpeg');
+				
+				// close camera pop-up
+				resetCameraModal();
 			
 				// Define the prompt for the image
 				const image_prompt = `Provide the nutritional information for the food item in this image, including an estimate for weight or volume if applicable (e.g. "45g chicken breast" or "1 cup white rice"). If the image is a bar code then search for a food product with this bar code. If you are unsure what the item is, make your best guess. Respond only with a JSON object. The JSON should have the following structure: { "food_name": "...", "calories": 0, "protein": 0, "fat": 0, "carbs": 0 }. All values should be numerical (calories, protein, fat, carbs) and represent the total for the specified serving. Do not respond with anything other than a properly formed JSON object. If you do not know the values then provide your best guess. Any other response is unacceptable.?json=true`;
 			
 				// Add a pending item to the list immediately
 				const pendingText = "Processing image...";
-				showMessage('Processing image...', 5000);
+				showMessage('Processing image...');
 				addItemBtn.disabled = true;
 				
 			
 				// Call the LLM with the prompt and image data
 				const result = await callLLM(image_prompt, imageData);
+				
+				// Clear the processing message once the API call is done
+				clearMessage();
 			
 				// Now, process the API response and update the list
 				if (result) {
 					await processApiResponse(result, pendingText);
 				} else {
-					showMessage("No valid data returned from image scan. Please try again or enter manually.");
+					showMessage("No valid data returned from image scan. Please try again or enter manually.",2000);
 				}
 				
-				// Reset the camera modal after the process is complete
-				resetCameraModal();
 			});
 
-       
-            
-            
+                
 
             // --- State Variables ---
             // `allFoodEntries` now stores all food entries, organized by date
@@ -765,7 +768,7 @@ takePhotoBtn.addEventListener('click', async () => {
 					updateTotals();
 				}
 			
-				showMessage(`${item.text} added to today's list!`);
+				showMessage(`${item.text} added to today's list!`,2000);
 			};          
             
             
@@ -837,20 +840,30 @@ takePhotoBtn.addEventListener('click', async () => {
                 return plainText;
             };
 
-            /**
-             * Shows a temporary message box for user feedback.
-             * @param {string} message The message to display.
-             * @param {number} duration The duration in milliseconds to show the message.
-             */
-            const showMessage = (message, duration = 2000) => {
-                messageBox.textContent = message;
-                messageBox.classList.remove('opacity-0', 'pointer-events-none');
-                messageBox.classList.add('opacity-100');
-                setTimeout(() => {
-                    messageBox.classList.remove('opacity-100');
-                    messageBox.classList.add('opacity-0', 'pointer-events-none');
-                }, duration);
-            };
+			/**
+			 * Shows a message box for user feedback.
+			 * @param {string} message The message to display.
+			 * @param {number} [duration] Optional duration in milliseconds. If omitted, message is persistent.
+			 */
+			const showMessage = (message, duration) => {
+				messageBox.textContent = message;
+				messageBox.classList.remove('opacity-0', 'pointer-events-none');
+				messageBox.classList.add('opacity-100');
+			
+				if (duration) {
+					setTimeout(() => {
+						messageBox.classList.remove('opacity-100');
+						messageBox.classList.add('opacity-0', 'pointer-events-none');
+					}, duration);
+				}
+			};
+			
+			// Clears the message manually
+			const clearMessage = () => {
+				messageBox.classList.remove('opacity-100');
+				messageBox.classList.add('opacity-0', 'pointer-events-none');
+			};
+
 			
 			/**
 			 * Shows a custom modal with dynamic content.
@@ -1136,9 +1149,11 @@ takePhotoBtn.addEventListener('click', async () => {
                                     </div>
                                 `;
                                 showModal(modalHtml, async () => {
-                                    showMessage("Processing item...", 5000);
+                                    showMessage("Processing item...");
                                     try {
                                         const nutritionData = await getNutritionData(item.text);
+                                        // clear processing message
+                                        clearMessage();
                                         if (nutritionData) {
                                             item.text = nutritionData.food_name || item.text;
                                             item.calories = nutritionData.calories;
@@ -1146,12 +1161,12 @@ takePhotoBtn.addEventListener('click', async () => {
                                             item.fat = nutritionData.fat;
                                             item.carbs = nutritionData.carbs;
                                             item.isPending = false;
-                                            showMessage('Item updated successfully!');
+                                            showMessage('Item updated successfully!',2000);
                                         } else {
                                             showMessage('Could not process the item at this time.', 3000);
                                         }
                                     } catch (e) {
-                                        showMessage('Could not process the item. Check your internet connection or API settings.', 5000);
+                                        showMessage('Could not process the item. Check your internet connection or API settings.', 3000);
                                     }
                                     renderFoodList();
                                     updateTotals();
@@ -1443,7 +1458,7 @@ async function callLLM(prompt, imageData = null) {
 					}
 				} catch (e) {
 					console.error('API call failed:', e);
-					showMessage('Failed to get nutrition data. Please check your API key and URL in settings.', 5000);
+					showMessage('Failed to get nutrition data. Please check your API key and URL in settings.', 3000);
 					return null;
 				}
 			};
@@ -1729,10 +1744,10 @@ const updateMacroPieChart = (historicalData) => {
                 
                 
                 if (allPendingItems.length === 0) {
-                    // showMessage("No pending items to process.");
+                    // showMessage("No pending items to process.",2000);
                     return;
 				} else {
-					showMessage(`Processing ${allPendingItems.length} pending item(s)...`, 5000);                    
+					showMessage(`Processing ${allPendingItems.length} pending item(s)...`, 2000);                    
                 }
                 
                 
@@ -1890,7 +1905,7 @@ const updateMacroPieChart = (historicalData) => {
 					return;
 				}
 			
-				showMessage('Adding item...', 5000);
+				showMessage('Adding item...');
 				addItemBtn.disabled = true;
 			
 				let nutritionData = null;
@@ -1930,6 +1945,8 @@ const updateMacroPieChart = (historicalData) => {
 						nutritionData = null; // Ensure nutritionData is null on API failure
 					}
 				}
+				// clear "adding item" message
+				clearMessage();
 			
 				// Process the data based on API response
 				if (nutritionData &&
@@ -1952,7 +1969,7 @@ const updateMacroPieChart = (historicalData) => {
 						saveFoodCache();
 					}
 			
-					showMessage(`${newEntry.text} added!`);
+					showMessage(`${newEntry.text} added!`,2000);
 					// Now, process all other pending items
 					await processPendingItems();
 				} else {
@@ -1988,7 +2005,7 @@ const updateMacroPieChart = (historicalData) => {
                 a.download = 'nutrition_settings.json';
                 a.click();
                 URL.revokeObjectURL(url);
-                showMessage('Settings saved to file!');
+                showMessage('Settings saved to file!',3000);
             };
 
             /** Loads settings from a local JSON file. */
@@ -2037,7 +2054,7 @@ const updateMacroPieChart = (historicalData) => {
                         // Re-render the UI with the new settings
                         updateSettingsUI();
                         updateTotals();
-                        showMessage('Settings loaded successfully!');
+                        showMessage('Settings loaded successfully!',2000);
 
                     } catch (error) {
                         console.error('Error loading settings file:', error);
@@ -2116,7 +2133,7 @@ const updateMacroPieChart = (historicalData) => {
 
                         renderFoodList();
                         updateTotals();
-                        showMessage('CSV data loaded successfully!');
+                        showMessage('CSV data loaded successfully!',2000);
 
                     } catch (error) {
                         console.error('Error loading CSV file:', error);
@@ -2160,7 +2177,7 @@ const updateMacroPieChart = (historicalData) => {
 						allFoodEntries[dateKey].splice(index, 1);
 						renderFoodList();
 						updateTotals();
-						showMessage('Item deleted.');
+						showMessage('Item deleted.',2000);
 					});
 				}
 								
@@ -2214,7 +2231,7 @@ const updateMacroPieChart = (historicalData) => {
 								let nutritionData;
 								if (useFoodCache && foodCache[newText.toLowerCase()]) {
 									nutritionData = foodCache[newText.toLowerCase()];
-									showMessage('Item found in cache!');
+									showMessage('Item found in cache!',2000);
 								} else {
 									nutritionData = await getNutritionData(newText);
 								}
@@ -2226,7 +2243,7 @@ const updateMacroPieChart = (historicalData) => {
 									allFoodEntries[dateKey][index].fat = nutritionData.fat;
 									allFoodEntries[dateKey][index].carbs = nutritionData.carbs;
 									allFoodEntries[dateKey][index].isPending = false;
-									showMessage('Item and nutrition data updated.');
+									showMessage('Item and nutrition data updated.',2000);
 								} else {
 									showMessage('Could not find nutrition data for the new item. Keeping previous values.', 5000);
 									allFoodEntries[dateKey][index].text = newText;
@@ -2240,7 +2257,7 @@ const updateMacroPieChart = (historicalData) => {
 								allFoodEntries[dateKey][index].fat = newFat;
 								allFoodEntries[dateKey][index].carbs = newCarbs;
 								allFoodEntries[dateKey][index].isPending = false;
-								showMessage('Item updated successfully.');
+								showMessage('Item updated successfully.',2000);
 							}
 							renderFoodList();
 							updateTotals();
@@ -2289,7 +2306,7 @@ const updateMacroPieChart = (historicalData) => {
                     saveCalorieTarget();
                     updateTotals();
                     updateSettingsUI();
-                    showMessage('Daily target saved!');
+                    showMessage('Daily target saved!',2000);
                 } else {
                     showMessage('Please enter a valid calorie target.', 3000);
                 }
@@ -2302,7 +2319,7 @@ const updateMacroPieChart = (historicalData) => {
                     dailyFoodEntries.push(foodText);
                     dailyFoodInput.value = '';
                     saveDailyEntries();
-                    showMessage('Daily food item added.');
+                    showMessage('Daily food item added.',2000);
                 }
             });
 
@@ -2313,7 +2330,7 @@ const updateMacroPieChart = (historicalData) => {
                     const index = parseInt(removeBtn.dataset.index, 10);
                     dailyFoodEntries.splice(index, 1);
                     saveDailyEntries();
-                    showMessage('Daily food item removed.');
+                    showMessage('Daily food item removed.',2000);
                 }
             });
             
@@ -2341,14 +2358,14 @@ const updateMacroPieChart = (historicalData) => {
                 localStorage.setItem('useFoodCache', useFoodCache);
 
                 updateSettingsUI();
-                showMessage('API settings saved!');
-                console.log(`Saved API settings`);
+                showMessage('API settings saved!',2000);
+                console.log(`Saved API settings`,2000);
             });
 
             // "Default URL" button listener
             defaultApiUrlBtn.addEventListener('click', () => {
                 apiUrlInput.value = DEFAULT_API_URL;
-                showMessage('API URL set to default.');
+                showMessage('API URL set to default.',2000);
             });
 
             // Export data button listener
@@ -2364,7 +2381,7 @@ const updateMacroPieChart = (historicalData) => {
                 a.download = 'nutrition_data.csv'; // Set the file name
                 a.click();
                 URL.revokeObjectURL(url);
-                showMessage('Data exported!');
+                showMessage('Data exported!',2000);
             });
             
             // Save settings button listener
@@ -2398,7 +2415,7 @@ const updateMacroPieChart = (historicalData) => {
                     userGoals = ""; // New: Clear user goals
                     
                     initializeApp(); // Re-initialize to reset the app state
-                    showMessage('All data cleared!');
+                    showMessage('All data cleared!',2000);
                 });
             });
             
