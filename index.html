@@ -346,7 +346,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Global Variables and Constants ---
-            const APP_VERSION = '3.5';
+            const APP_VERSION = '3.6';
             //const DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
             const DEFAULT_API_URL = "https://text.pollinations.ai";
             
@@ -725,6 +725,51 @@ takePhotoBtn.addEventListener('click', async () => {
                 }
             };
             
+			/**
+			 * Adds a food item to today's date, regardless of the currently viewed date.
+			 * @param {object} item The food item object to add.
+			 * @param {string} currentDateKey The formatted date key for the currently viewed date.
+			 */
+			const addFoodItemToToday = (item, currentDateKey) => {
+				// Get today's date
+				const today = new Date();
+				const todayKey = formatDate(today);
+			
+				// Create a new entry with the item's data
+				const newEntry = {
+					id: Date.now(),
+					text: item.text,
+					timestamp: new Date().toISOString(),
+					calories: item.calories,
+					protein: item.protein,
+					fat: item.fat,
+					carbs: item.carbs,
+					isPending: false
+				};
+				
+				// Initialize the list for today if it doesn't exist
+				if (!allFoodEntries[todayKey]) {
+					allFoodEntries[todayKey] = [];
+				}
+			
+				// Add the new entry to today's list
+				allFoodEntries[todayKey].unshift(newEntry);
+				
+				// Call the correct function to save the updated data
+				saveEntries();
+				
+				// If the user is currently viewing today's date, re-render the list
+				const isViewingToday = currentDateKey === todayKey;
+				if (isViewingToday) {
+					renderFoodList();
+					updateTotals();
+				}
+			
+				showMessage(`${item.text} added to today's list!`);
+			};          
+            
+            
+            
             /**
              * A simple Markdown to HTML converter. It's not a full parser, but it handles common
              * formatting like bold, italics, headers, and lists.
@@ -806,31 +851,40 @@ takePhotoBtn.addEventListener('click', async () => {
                     messageBox.classList.add('opacity-0', 'pointer-events-none');
                 }, duration);
             };
-
-            /**
-             * Shows a custom modal with dynamic content.
-             * @param {string} htmlContent The HTML string to inject into the modal.
-             * @param {function} onConfirm The callback function to run on confirmation.
-             */
-            const showModal = (htmlContent, onConfirm) => {
-                modalContent.innerHTML = htmlContent;
-                genericModal.classList.remove('hidden');
-                genericModal.classList.add('flex');
-
-                const confirmBtn = modalContent.querySelector('#modal-confirm-btn');
-                const cancelBtn = modalContent.querySelector('#modal-cancel-btn');
-                
-                if (confirmBtn) {
-                    confirmBtn.onclick = () => {
-                        onConfirm(modalContent);
-                        hideModal();
-                    };
-                }
-                
-                if (cancelBtn) {
-                    cancelBtn.onclick = hideModal;
-                }
-            };
+			
+			/**
+			 * Shows a custom modal with dynamic content.
+			 * @param {string} htmlContent The HTML string to inject into the modal.
+			 * @param {function} onConfirm The callback function to run on confirmation.
+			 */
+			const showModal = (htmlContent, onConfirm) => {
+				modalContent.innerHTML = htmlContent;
+				genericModal.classList.remove('hidden');
+				genericModal.classList.add('flex');
+			
+				const confirmBtn = modalContent.querySelector('#modal-confirm-btn');
+				const cancelBtn = modalContent.querySelector('#modal-cancel-btn');
+				const addToTodayBtn = modalContent.querySelector('#modal-add-to-today-btn');
+				
+				// Add event listeners that pass the click event
+				if (confirmBtn) {
+					confirmBtn.onclick = (e) => { // Pass the event object 'e'
+						onConfirm(e, modalContent); // Pass 'e' to the callback
+						hideModal();
+					};
+				}
+				
+				if (cancelBtn) {
+					cancelBtn.onclick = hideModal;
+				}
+			
+				if (addToTodayBtn) {
+					addToTodayBtn.onclick = (e) => { // Pass the event object 'e'
+						onConfirm(e, modalContent); // Pass 'e' to the callback
+						hideModal();
+					};
+				}
+			};
             
             /** Hides the custom modal. */
             const hideModal = () => {
@@ -2081,118 +2135,117 @@ const updateMacroPieChart = (historicalData) => {
 				const finalTotalCalories = document.getElementById('total-calories').innerText;
 			});
 
-            // Event delegation for delete and edit buttons
-            foodListContainer.addEventListener('click', async (e) => {
-                const deleteBtn = e.target.closest('.delete-item-btn');
-                const editBtn = e.target.closest('.edit-item-btn');
-
-                if (deleteBtn) {
-                    const index = parseInt(deleteBtn.dataset.index, 10);
-                    const dateKey = formatDate(currentDate);
-                    const item = allFoodEntries[dateKey][index];
-                    
-                    const modalHtml = `
-                        <h3 class="font-bold text-lg mb-2">Delete Item</h3>
-                        <p class="text-sm text-gray-600 mb-4">Are you sure you want to delete "${item.text}"?</p>
-                        <div class="flex justify-end gap-2">
-                            <button id="modal-cancel-btn" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors duration-200">Cancel</button>
-                            <button id="modal-confirm-btn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200">Delete</button>
-                        </div>
-                    `;
-                    
-                    showModal(modalHtml, () => {
-                        allFoodEntries[dateKey].splice(index, 1);
-                        renderFoodList();
-                        updateTotals();
-                        showMessage('Item deleted.');
-                    });
-                }
-                
-                if (editBtn) {
-                    const index = parseInt(editBtn.dataset.index, 10);
-                    const dateKey = formatDate(currentDate);
-                    const item = allFoodEntries[dateKey][index];
-                    
-                    const modalHtml = `
-                        <h3 class="font-bold text-lg mb-2">Edit Item</h3>
-                        <p class="text-sm text-gray-600 mb-2">Enter new nutritional values for "${item.text}".</p>
-                        <div class="space-y-2 mb-4">
-                            <label for="modal-food-name" class="text-sm font-medium text-gray-700">Food Name</label>
-                            <input type="text" id="modal-food-name" class="w-full p-2 border rounded-lg" placeholder="Food Name" value="${item.text}">
-                            <label for="modal-calories" class="text-sm font-medium text-gray-700">Calories</label>
-                            <input type="number" id="modal-calories" class="w-full p-2 border rounded-lg" placeholder="Calories" value="${Math.round(item.calories)}">
-                            <label for="modal-protein" class="text-sm font-medium text-gray-700">Protein (g)</label>
-                            <input type="number" id="modal-protein" class="w-full p-2 border rounded-lg" placeholder="Protein (g)" value="${Math.round(item.protein)}">
-                            <label for="modal-fat" class="text-sm font-medium text-gray-700">Fat (g)</label>
-                            <input type="number" id="modal-fat" class="w-full p-2 border rounded-lg" placeholder="Fat (g)" value="${Math.round(item.fat)}">
-                            <label for="modal-carbs" class="text-sm font-medium text-gray-700">Carbs (g)</label>
-                            <input type="number" id="modal-carbs" class="w-full p-2 border rounded-lg" placeholder="Carbs (g)" value="${Math.round(item.carbs)}">
-                        </div>
-                        <div class="flex justify-end gap-2">
-                            <button id="modal-cancel-btn" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors duration-200">Cancel</button>
-                            <button id="modal-confirm-btn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">Save</button>
-                        </div>
-                    `;
-                    
-                    showModal(modalHtml, async (modalContentEl) => {
-                        const newText = modalContentEl.querySelector('#modal-food-name').value.trim();
-                        const oldText = item.text.trim();
-                        const newCalories = parseFloat(modalContentEl.querySelector('#modal-calories').value);
-                        const newProtein = parseFloat(modalContentEl.querySelector('#modal-protein').value);
-                        const newFat = parseFloat(modalContentEl.querySelector('#modal-fat').value);
-                        const newCarbs = parseFloat(modalContentEl.querySelector('#modal-carbs').value);
-                        
-                        /* // throw an error if any NaN remains after editing
-                        if (!newText || isNaN(newCalories) || isNaN(newProtein) || isNaN(newFat) || isNaN(newCarbs)) {
-                            showMessage('Invalid input. Please enter a food name and numbers for all fields.', 3000);
-                            return;
-                        }
-                        */
-
-                        // Check if the food text has changed
-                        if (newText.toLowerCase() !== oldText.toLowerCase()) {
-                            showMessage('Re-calculating nutrition data...', 5000);
-                            
-                            let nutritionData;
-                            if (useFoodCache && foodCache[newText.toLowerCase()]) {
-                                nutritionData = foodCache[newText.toLowerCase()];
-                                showMessage('Item found in cache!');
-                            } else {
-                                nutritionData = await getNutritionData(newText);
-                            }
-
-                            if (nutritionData) {
-                                allFoodEntries[dateKey][index].text = nutritionData.food_name || newText;
-                                allFoodEntries[dateKey][index].calories = nutritionData.calories;
-                                allFoodEntries[dateKey][index].protein = nutritionData.protein;
-                                allFoodEntries[dateKey][index].fat = nutritionData.fat;
-                                allFoodEntries[dateKey][index].carbs = nutritionData.carbs;
-                                allFoodEntries[dateKey][index].isPending = false; // It's no longer pending
-                                showMessage('Item and nutrition data updated.');
-                            } else {
-                                showMessage('Could not find nutrition data for the new item. Keeping previous values.', 5000);
-                                // Don't update the values if the API call fails
-                                allFoodEntries[dateKey][index].text = newText;
-                                // Keep isPending as true since the API call failed
-                                allFoodEntries[dateKey][index].isPending = true;
-                            }
-                        } else {
-                            // If only the numbers were changed, update them directly
-                            allFoodEntries[dateKey][index].text = newText;
-                            allFoodEntries[dateKey][index].calories = newCalories;
-                            allFoodEntries[dateKey][index].protein = newProtein;
-                            allFoodEntries[dateKey][index].fat = newFat;
-                            allFoodEntries[dateKey][index].carbs = newCarbs;
-                            // Assume if manually edited, it's no longer pending
-                            allFoodEntries[dateKey][index].isPending = false;
-                            showMessage('Item updated successfully.');
-                        }
-                        
-                        renderFoodList();
-                        updateTotals();
-                    });
-                }
-            });
+			// Event delegation for delete and edit buttons
+			foodListContainer.addEventListener('click', async (e) => {
+				const deleteBtn = e.target.closest('.delete-item-btn');
+				const editBtn = e.target.closest('.edit-item-btn');
+			
+				if (deleteBtn) {
+					const index = parseInt(deleteBtn.dataset.index, 10);
+					const dateKey = formatDate(currentDate);
+					const item = allFoodEntries[dateKey][index];
+					
+					const modalHtml = `
+						<h3 class="font-bold text-lg mb-2">Delete Item</h3>
+						<p class="text-sm text-gray-600 mb-4">Are you sure you want to delete "${item.text}"?</p>
+						<div class="flex justify-end gap-2">
+							<button id="modal-cancel-btn" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors duration-200">Cancel</button>
+							<button id="modal-confirm-btn" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200">Delete</button>
+						</div>
+					`;
+					
+					showModal(modalHtml, (e) => { // Now the callback receives the event 'e'
+						allFoodEntries[dateKey].splice(index, 1);
+						renderFoodList();
+						updateTotals();
+						showMessage('Item deleted.');
+					});
+				}
+								
+				if (editBtn) {
+					const index = parseInt(editBtn.dataset.index, 10);
+					const dateKey = formatDate(currentDate);
+					const item = allFoodEntries[dateKey][index];
+				
+					const modalHtml = `
+						<h3 class="font-bold text-lg mb-2">Edit Item</h3>
+						<p class="text-sm text-gray-600 mb-2">Enter new nutritional values for "${item.text}".</p>
+						<div class="space-y-2 mb-4">
+							<label for="modal-food-name" class="text-sm font-medium text-gray-700">Food Name</label>
+							<input type="text" id="modal-food-name" class="w-full p-2 border rounded-lg" placeholder="Food Name" value="${item.text}">
+							<label for="modal-calories" class="text-sm font-medium text-gray-700">Calories</label>
+							<input type="number" id="modal-calories" class="w-full p-2 border rounded-lg" placeholder="Calories" value="${Math.round(item.calories)}">
+							<label for="modal-protein" class="text-sm font-medium text-gray-700">Protein (g)</label>
+							<input type="number" id="modal-protein" class="w-full p-2 border rounded-lg" placeholder="Protein (g)" value="${Math.round(item.protein)}">
+							<label for="modal-fat" class="text-sm font-medium text-gray-700">Fat (g)</label>
+							<input type="number" id="modal-fat" class="w-full p-2 border rounded-lg" placeholder="Fat (g)" value="${Math.round(item.fat)}">
+							<label for="modal-carbs" class="text-sm font-medium text-gray-700">Carbs (g)</label>
+							<input type="number" id="modal-carbs" class="w-full p-2 border rounded-lg" placeholder="Carbs (g)" value="${Math.round(item.carbs)}">
+						</div>
+						<div class="flex justify-end gap-2">
+							<button id="modal-add-to-today-btn" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200">Add to Today</button>
+							<button id="modal-cancel-btn" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors duration-200">Cancel</button>
+							<button id="modal-confirm-btn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">Save</button>
+						</div>
+					`;
+				
+					showModal(modalHtml, async (e, modalContentEl) => {
+						const clickedBtnId = e.target.id;
+				
+						if (clickedBtnId === 'modal-add-to-today-btn') {
+							// Use the new helper function
+							addFoodItemToToday(item, dateKey);
+						} else if (clickedBtnId === 'modal-confirm-btn') {
+							// ... (existing "Save" logic remains here) ...
+				
+							const newText = modalContentEl.querySelector('#modal-food-name').value.trim();
+							const oldText = item.text.trim();
+							const newCalories = parseFloat(modalContentEl.querySelector('#modal-calories').value);
+							const newProtein = parseFloat(modalContentEl.querySelector('#modal-protein').value);
+							const newFat = parseFloat(modalContentEl.querySelector('#modal-fat').value);
+							const newCarbs = parseFloat(modalContentEl.querySelector('#modal-carbs').value);
+				
+							// Check if the food text has changed
+							if (newText.toLowerCase() !== oldText.toLowerCase()) {
+								showMessage('Re-calculating nutrition data...', 5000);
+				
+								let nutritionData;
+								if (useFoodCache && foodCache[newText.toLowerCase()]) {
+									nutritionData = foodCache[newText.toLowerCase()];
+									showMessage('Item found in cache!');
+								} else {
+									nutritionData = await getNutritionData(newText);
+								}
+				
+								if (nutritionData) {
+									allFoodEntries[dateKey][index].text = nutritionData.food_name || newText;
+									allFoodEntries[dateKey][index].calories = nutritionData.calories;
+									allFoodEntries[dateKey][index].protein = nutritionData.protein;
+									allFoodEntries[dateKey][index].fat = nutritionData.fat;
+									allFoodEntries[dateKey][index].carbs = nutritionData.carbs;
+									allFoodEntries[dateKey][index].isPending = false;
+									showMessage('Item and nutrition data updated.');
+								} else {
+									showMessage('Could not find nutrition data for the new item. Keeping previous values.', 5000);
+									allFoodEntries[dateKey][index].text = newText;
+									allFoodEntries[dateKey][index].isPending = true;
+								}
+							} else {
+								// If only the numbers were changed, update them directly
+								allFoodEntries[dateKey][index].text = newText;
+								allFoodEntries[dateKey][index].calories = newCalories;
+								allFoodEntries[dateKey][index].protein = newProtein;
+								allFoodEntries[dateKey][index].fat = newFat;
+								allFoodEntries[dateKey][index].carbs = newCarbs;
+								allFoodEntries[dateKey][index].isPending = false;
+								showMessage('Item updated successfully.');
+							}
+							renderFoodList();
+							updateTotals();
+						}
+					});
+				}
+			});
 
             // Date navigation button listeners
             prevDayBtn.addEventListener('click', () => {
