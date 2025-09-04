@@ -1476,7 +1476,7 @@ async function callLLM(prompt, imageData = null) {
 			 * @returns {Promise<string>} A promise that resolves to the text analysis.
 			 */
 			const getAnalysisFromAPI = async (historicalData, userGoals) => {
-				let prompt = `Please analyze the following nutrition data kindly and gently. The user may be struggling with disordered eating, so it is absolutely imperative that your analysis and suggestions are supportive, encouraging, and non-judgmental. Do not use words like 'good', 'bad', 'failed', or 'perfect'. Instead, focus on trends, consistency, and positive progress. Your goal is to provide a caring perspective on their nutrition journey. Explain the trends you see in their nutrition over time and offer a few simple, actionable, and gentle suggestions to help them on their journey. The suggestions should be about overall patterns, not specific days or foods.`;
+				let prompt = `Please analyze the following nutrition data kindly and gently. The user may be struggling with disordered eating, so it is absolutely imperative that your analysis and suggestions are supportive, encouraging, and non-judgmental. Do not use words like 'good', 'bad', 'failed', or 'perfect'. Instead, focus on trends, consistency, and positive progress. Your goal is to provide a caring perspective on their nutrition journey. Explain the trends you see in their nutrition over time and offer a few simple, actionable, and gentle suggestions to help them on their journey. The suggestions should be about overall patterns, not specific days or foods. Return only plain text.`;
 				
 				if (userGoals) {
 					prompt += `\n\nTake the user's personal goals into consideration for your analysis. Their goals are: "${userGoals}"`;
@@ -1487,7 +1487,8 @@ async function callLLM(prompt, imageData = null) {
 				
 				try {
 					// Use the new, unified callLLM function
-					const analysisText = await callLLM(prompt, 'text/plain');
+					//const analysisText = await callLLM(prompt, 'text/plain');
+					const analysisText = await callLLM(prompt);
 					return analysisText;
 				} catch (e) {
 					console.error('Analysis API call failed:', e);
