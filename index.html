@@ -173,14 +173,17 @@
             </div>
         </div>
         
-        <div id="analyze-button-container" class="flex justify-center mb-6">
-            <button id="analyze-data-btn" class="w-full sm:w-auto p-3 sm:p-4 bg-indigo-500 text-white rounded-xl font-semibold hover:bg-indigo-600 transition-all duration-200 shadow-md">
-                Analyze My Data
-            </button>
-        </div>
 
-        <div id="food-list-container" class="space-y-4">
-            </div>
+
+        <div id="food-list-container" class="space-y-4"> </div>
+            
+		<div id="analyze-button-container" class="flex justify-center mt-6 mb-6">
+			<button id="analyze-data-btn" class="w-full sm:w-auto p-3 sm:p-4 bg-indigo-500 text-white rounded-xl font-semibold hover:bg-indigo-600 transition-all duration-200 shadow-md">
+				Analyze My Data
+			</button>
+		</div>
+           
+            
 
         <div id="message-box" class="fixed bottom-4 left-4 right-4 bg-gray-800 text-white text-center p-3 rounded-xl shadow-xl transition-opacity duration-300 opacity-0 pointer-events-none">
             Calculating...
@@ -374,7 +377,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Global Variables and Constants ---
-            const APP_VERSION = '3.7';
+            const APP_VERSION = '3.8';
             //const DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
             const DEFAULT_API_URL = "https://text.pollinations.ai";
             
