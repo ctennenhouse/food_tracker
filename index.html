@@ -46,7 +46,17 @@
 			top: 100%; /* position below input */
 			left: 0;
 			box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-		}		      
+		#food-input {
+			position: relative; /* ensures container positioning works */
+			padding-right: 2.5rem; /* space for the × */
+		}
+		
+		#clear-food-input {
+			pointer-events: auto; /* always clickable */
+		}
+
+		
+		      
     </style>
 </head>
 <body class="flex flex-col min-h-screen">
@@ -152,27 +162,44 @@
         </header>
 		-->
 
-        <div class="bg-white p-4 sm:p-6 rounded-3xl shadow-lg mb-6">
-            <div class="relative flex flex-col sm:flex-row gap-4 items-center">
-                <input type="text" id="food-input" class="flex-1 p-3 sm:p-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200" placeholder="e.g. 1 medium apple or 1 large steak">
-				<!---autocomplete-->
-				<div id="autocomplete-suggestions" class="absolute bg-white border border-gray-300 rounded-xl shadow-md mt-1 w-full max-h-40 overflow-y-auto hidden z-50"></div>
-                
-                
-                <button id="add-item-btn" class="w-full sm:w-auto p-3 sm:p-4 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 shadow-md">
-                    Add Item
-                </button>
-				<button id="camera-btn" class="w-full sm:w-auto p-3 sm:p-4 bg-gray-500 text-white rounded-xl font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200 shadow-md flex items-center justify-center">
+		<div class="bg-white p-4 sm:p-6 rounded-3xl shadow-lg mb-6">
+			<div class="flex gap-4 items-center w-full">
+				<!-- Input wrapper -->
+				<div class="relative flex-1">
+					<input 
+						type="text" 
+						id="food-input" 
+						class="w-full p-3 sm:p-4 pr-10 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200" 
+						placeholder="45g chicken breast, 1 medium apple"
+					>
+					<!-- Persistent clear button inside textbox -->
+					<button 
+						id="clear-food-input" 
+						class="absolute right-3 top-1/2 transform -translate-y-1/2 text-black font-bold text-lg cursor-pointer"
+					>&times;</button>
+		
+					<!-- Autocomplete suggestions -->
+					<div id="autocomplete-suggestions" 
+						 class="absolute bg-white border border-gray-300 rounded-xl shadow-md top-full w-full max-h-40 overflow-y-auto hidden z-50">
+					</div>
+				</div>
+		
+				<!-- Buttons -->
+				<button id="add-item-btn" class="p-3 sm:p-4 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 shadow-md">
+					Add Item
+				</button>
+		
+				<button id="camera-btn" class="p-3 sm:p-4 bg-gray-500 text-white rounded-xl font-semibold hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200 shadow-md flex items-center justify-center">
 					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.15a49.123 49.123 0 0 0-1.134-.175c-.38-.054-.757-.112-1.134-.175A2.31 2.31 0 0 1 15.186 6.175M12 1.5a2.25 2.25 0 1 1 0 4.5 2.25 2.25 0 0 1 0-4.5ZM12 18.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
 					</svg>
 				</button>
-            </div>
-            <div id="pending-items-notification" class="mt-4 hidden p-2 bg-yellow-100 text-yellow-800 rounded-xl text-center text-sm">
-                You have pending food items that need to be processed.
-            </div>
-        </div>
-        
+			</div>
+		
+			<div id="pending-items-notification" class="mt-4 hidden p-2 bg-yellow-100 text-yellow-800 rounded-xl text-center text-sm">
+				You have pending food items that need to be processed.
+			</div>
+		</div>
 
 
         <div id="food-list-container" class="space-y-4"> </div>
@@ -422,6 +449,8 @@
             const settingsPage = document.getElementById('settings-page');
             const analysisPage = document.getElementById('analysis-page');
             const foodInput = document.getElementById('food-input');
+            const clearBtn = document.getElementById('clear-food-input');
+			const suggestionsBox = document.getElementById('autocomplete-suggestions');
             const addItemBtn = document.getElementById('add-item-btn');
             const foodListContainer = document.getElementById('food-list-container');
             const totalCaloriesEl = document.getElementById('total-calories');
@@ -803,9 +832,6 @@
 			/*
 			* Code for dropdown menu to autocomplete entered food items
 			*/            
-			const suggestionsBox = document.getElementById('autocomplete-suggestions');
-			console.log("SuggestionsBox element:", suggestionsBox);
-
 			// load from local storage to make suggestions			
 			const getFoodHistory = () => {
 				const history = [];
@@ -843,6 +869,8 @@
 			// Show suggestions as user types
 			foodInput.addEventListener('input', () => {
 				const query = foodInput.value.trim().toLowerCase();
+			
+
 				if (!query) {
 					suggestionsBox.classList.add('hidden');
 					return;
@@ -871,7 +899,6 @@
 			
 				suggestionsBox.classList.remove('hidden');
 			});
-
             
             
             
@@ -2257,6 +2284,12 @@
 				// Once the item is processed and the total is updated, get the final value.
 				const finalTotalCalories = document.getElementById('total-calories').innerText;
 			});
+			
+			clearBtn.addEventListener('click', () => {
+				foodInput.value = '';
+				foodInput.focus();
+				document.getElementById('autocomplete-suggestions').classList.add('hidden');
+			});		
 
 			// Event delegation for delete and edit buttons
 			foodListContainer.addEventListener('click', async (e) => {
