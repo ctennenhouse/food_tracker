@@ -802,24 +802,43 @@
 			*/            
 			const suggestionsBox = document.getElementById('autocomplete-suggestions');
 			console.log("SuggestionsBox element:", suggestionsBox);
-			
-			// Helper: get unique food names from history
+
+			// load from local storage to make suggestions			
 			const getFoodHistory = () => {
 				const history = [];
-				Object.values(allFoodEntries).forEach(dayArray => {
-					dayArray.forEach(item => {
+				// newest dates first
+				const dates = Object.keys(allFoodEntries).sort().reverse();
+				dates.forEach(date => {
+					allFoodEntries[date].forEach(item => {
 						if (item.text) history.push(item.text);
 					});
 				});
-				return Array.from(new Set(history));
+			
+				// dedupe while keeping first occurrence (most recent)
+				const seen = new Set();
+				const deduped = history.filter(text => {
+					if (seen.has(text)) return false;
+					seen.add(text);
+					return true;
+				});
+			
+				return deduped;
 			};
 
 
 
+
+			// scroll to top when keyboard opens
+			foodInput.addEventListener("focus", () => {
+				setTimeout(() => {
+					foodInput.scrollIntoView({ behavior: "smooth", block: "start" });
+				}, 300); // small delay for keyboard
+			});
+			
+
 			
 			// Show suggestions as user types
 			foodInput.addEventListener('input', () => {
-				console.log("User typed:", foodInput.value);
 				const query = foodInput.value.trim().toLowerCase();
 				if (!query) {
 					suggestionsBox.classList.add('hidden');
@@ -828,9 +847,7 @@
 			
 				const matches = getFoodHistory()
 					.filter(name => name.toLowerCase().includes(query))
-					.slice(0, 5); // limit to top 5
-				console.log("Matches:", matches);
-
+					.slice(0, 6); // show only recent 6 matches
 			
 				suggestionsBox.innerHTML = '';
 				if (matches.length === 0) {
@@ -851,13 +868,7 @@
 			
 				suggestionsBox.classList.remove('hidden');
 			});
-			
-			// Hide suggestions when clicking elsewhere
-			document.addEventListener('click', (e) => {
-				if (!suggestionsBox.contains(e.target) && e.target !== foodInput) {
-					suggestionsBox.classList.add('hidden');
-				}
-			});
+
             
             
             
