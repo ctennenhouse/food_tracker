@@ -34,6 +34,18 @@
 		.chart-container {
 			width: 100%;
 			height: 400px; /* Or whatever height you prefer */
+		}		
+		#autocomplete-suggestions {
+			position: absolute;
+			background: white;
+			border: 1px solid #ccc;
+			max-height: 150px;
+			overflow-y: auto;
+			width: 100%; /* match the input width */
+			z-index: 1000;
+			top: 100%; /* position below input */
+			left: 0;
+			box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 		}		      
     </style>
 </head>
@@ -141,8 +153,12 @@
 		-->
 
         <div class="bg-white p-4 sm:p-6 rounded-3xl shadow-lg mb-6">
-            <div class="flex flex-col sm:flex-row gap-4 items-center">
+            <div class="relative flex flex-col sm:flex-row gap-4 items-center">
                 <input type="text" id="food-input" class="flex-1 p-3 sm:p-4 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200" placeholder="e.g. 1 medium apple or 1 large steak">
+				<!---autocomplete-->
+				<div id="autocomplete-suggestions" class="absolute bg-white border border-gray-300 rounded-xl shadow-md mt-1 w-full max-h-40 overflow-y-auto hidden z-50"></div>
+                
+                
                 <button id="add-item-btn" class="w-full sm:w-auto p-3 sm:p-4 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200 shadow-md">
                     Add Item
                 </button>
@@ -358,7 +374,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Global Variables and Constants ---
-            const APP_VERSION = '3.6';
+            const APP_VERSION = '3.7';
             //const DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
             const DEFAULT_API_URL = "https://text.pollinations.ai";
             
@@ -477,9 +493,6 @@
             // New pending items notification
             const pendingItemsNotification = document.getElementById('pending-items-notification');
             
-
-
-
 
 			// --- Camera Functionality ---
 			const cameraBtn = document.getElementById('camera-btn');
@@ -782,6 +795,69 @@
 			
 				showMessage(`${item.text} added to today's list!`,2000);
 			};          
+            
+
+			/*
+			* Code for dropdown menu to autocomplete entered food items
+			*/            
+			const suggestionsBox = document.getElementById('autocomplete-suggestions');
+			console.log("SuggestionsBox element:", suggestionsBox);
+			
+			// Helper: get unique food names from history
+			const getFoodHistory = () => {
+				const history = [];
+				Object.values(allFoodEntries).forEach(dayArray => {
+					dayArray.forEach(item => {
+						if (item.text) history.push(item.text);
+					});
+				});
+				return Array.from(new Set(history));
+			};
+
+
+
+			
+			// Show suggestions as user types
+			foodInput.addEventListener('input', () => {
+				console.log("User typed:", foodInput.value);
+				const query = foodInput.value.trim().toLowerCase();
+				if (!query) {
+					suggestionsBox.classList.add('hidden');
+					return;
+				}
+			
+				const matches = getFoodHistory()
+					.filter(name => name.toLowerCase().includes(query))
+					.slice(0, 5); // limit to top 5
+				console.log("Matches:", matches);
+
+			
+				suggestionsBox.innerHTML = '';
+				if (matches.length === 0) {
+					suggestionsBox.classList.add('hidden');
+					return;
+				}
+			
+				matches.forEach(match => {
+					const div = document.createElement('div');
+					div.textContent = match;
+					div.className = 'p-2 cursor-pointer hover:bg-emerald-100';
+					div.onclick = () => {
+						foodInput.value = match;
+						suggestionsBox.classList.add('hidden');
+					};
+					suggestionsBox.appendChild(div);
+				});
+			
+				suggestionsBox.classList.remove('hidden');
+			});
+			
+			// Hide suggestions when clicking elsewhere
+			document.addEventListener('click', (e) => {
+				if (!suggestionsBox.contains(e.target) && e.target !== foodInput) {
+					suggestionsBox.classList.add('hidden');
+				}
+			});
             
             
             
@@ -1285,155 +1361,155 @@
             };
 
 
-/**
- * Calls a text-based LLM API with the given prompt.
- * It dynamically handles both traditional API formats and Pollinations.ai.
- * @param {string} prompt The text prompt to send to the LLM.
- * @param {string} [imageData=null] The image data URL to send for image analysis.
- * @returns {Promise<string>} A promise that resolves to the LLM's raw text response.
- */
-async function callLLM(prompt, imageData = null) {
-    const settings = {
-        API_URL: API_URL,
-        API_KEY: API_KEY
-    };
-
-    if (imageData) {
-    	console.log("Image data found");
-        if (settings.API_URL.includes("pollinations")) {
-            const { base64, mimeType } = dataURLtoBase64AndMime(imageData);
-            const imageFormat = mimeType.split('/')[1].toLowerCase();
-
-            const payload = {
-                model: "openai",
-                messages: [{
-                    role: "user",
-                    content: [{
-                        type: "text",
-                        text: prompt
-                    }, {
-                        type: "image_url",
-                        image_url: {
-                            url: imageData // Use the full data URL string directly
-                        }
-                    }]
-                }],
-                max_tokens: 500
-            }
-
-            const url = `https://text.pollinations.ai/openai`;
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-				console.log(response);
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`API error: ${response.statusText} - ${errorText}`);
-                }
-
-                const result = await response.json();
-                return result.choices[0].message.content;
-            } catch (err) {
-                console.error("Pollinations.ai image call failed:", err);
-                throw err;
-            }
-        } else {
-            // standard API call for image analysis
-            if (!settings.API_KEY) throw new Error("API key is not set.");
-            const { base64, mimeType } = dataURLtoBase64AndMime(imageData);
-
-            const payload = {
-                contents: [{
-                    parts: [
-                        { text: prompt },
-                        { inlineData: { mimeType, data: base64 } }
-                    ]
-                }]
-            };
-
-            const url = `${settings.API_URL}?key=${settings.API_KEY}`;
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-				console.log(response);                
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`API error: ${response.statusText} - ${JSON.stringify(errorData)}`);
-                }
-
-                const result = await response.json();
-
-                if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
-                    return result.candidates[0].content.parts[0].text;
-                } else {
-                    console.error("API Error:", result);
-                    throw new Error('Failed to get a valid response from the API.');
-                }
-            } catch (err) {
-                console.error("API call with image failed:", err);
-                throw err;
-            }
-        }
-    } else { // No image data, proceed with the original text-only logic
-    	console.log("No image data found");
-        if (settings.API_URL.includes("pollinations")) {
-            const url = `${settings.API_URL}/${encodeURIComponent(prompt).replace(/%3F/g, '?').replace(/%3D/g, '=').replace(/%26/g, '&')}`;
-            try {
-                const response = await fetch(url, { method: 'GET' });
-                if (!response.ok) throw new Error("Network error: " + response.status);
-                const text = await response.text();
-                console.log(text);
-                return text;
-            } catch (err) {
-                console.error("Pollinations.ai call failed:", err);
-                throw err;
-            }
-        } else {
-            if (!settings.API_KEY) throw new Error("API key is not set.");
-
-            const payload = {
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }],
-                generationConfig: {
-                    responseMimeType: "text/plain"
-                }
-            };
-
-            const response = await fetch(`${settings.API_URL}?key=${settings.API_KEY}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            console.log(response);
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`API error: ${response.statusText} - ${JSON.stringify(errorData)}`);
-            }
-
-            const result = await response.json();
-
-            if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
-                return result.candidates[0].content.parts[0].text;
-            } else {
-                console.error("API Error:", result);
-                throw new Error('Failed to get a valid response from the API.');
-            }
-        }
-    }
-}
+			/**
+			 * Calls a text-based LLM API with the given prompt.
+			 * It dynamically handles both traditional API formats and Pollinations.ai.
+			 * @param {string} prompt The text prompt to send to the LLM.
+			 * @param {string} [imageData=null] The image data URL to send for image analysis.
+			 * @returns {Promise<string>} A promise that resolves to the LLM's raw text response.
+			 */
+			async function callLLM(prompt, imageData = null) {
+				const settings = {
+					API_URL: API_URL,
+					API_KEY: API_KEY
+				};
 			
+				if (imageData) {
+					console.log("Image data found");
+					if (settings.API_URL.includes("pollinations")) {
+						const { base64, mimeType } = dataURLtoBase64AndMime(imageData);
+						const imageFormat = mimeType.split('/')[1].toLowerCase();
+			
+						const payload = {
+							model: "openai",
+							messages: [{
+								role: "user",
+								content: [{
+									type: "text",
+									text: prompt
+								}, {
+									type: "image_url",
+									image_url: {
+										url: imageData // Use the full data URL string directly
+									}
+								}]
+							}],
+							max_tokens: 500
+						}
+			
+						const url = `https://text.pollinations.ai/openai`;
+						try {
+							const response = await fetch(url, {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(payload)
+							});
+							console.log(response);
+			
+							if (!response.ok) {
+								const errorText = await response.text();
+								throw new Error(`API error: ${response.statusText} - ${errorText}`);
+							}
+			
+							const result = await response.json();
+							return result.choices[0].message.content;
+						} catch (err) {
+							console.error("Pollinations.ai image call failed:", err);
+							throw err;
+						}
+					} else {
+						// standard API call for image analysis
+						if (!settings.API_KEY) throw new Error("API key is not set.");
+						const { base64, mimeType } = dataURLtoBase64AndMime(imageData);
+			
+						const payload = {
+							contents: [{
+								parts: [
+									{ text: prompt },
+									{ inlineData: { mimeType, data: base64 } }
+								]
+							}]
+						};
+			
+						const url = `${settings.API_URL}?key=${settings.API_KEY}`;
+						try {
+							const response = await fetch(url, {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify(payload)
+							});
+							console.log(response);                
+			
+							if (!response.ok) {
+								const errorData = await response.json();
+								throw new Error(`API error: ${response.statusText} - ${JSON.stringify(errorData)}`);
+							}
+			
+							const result = await response.json();
+			
+							if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+								return result.candidates[0].content.parts[0].text;
+							} else {
+								console.error("API Error:", result);
+								throw new Error('Failed to get a valid response from the API.');
+							}
+						} catch (err) {
+							console.error("API call with image failed:", err);
+							throw err;
+						}
+					}
+				} else { // No image data, proceed with the original text-only logic
+					console.log("No image data found");
+					if (settings.API_URL.includes("pollinations")) {
+						const url = `${settings.API_URL}/${encodeURIComponent(prompt).replace(/%3F/g, '?').replace(/%3D/g, '=').replace(/%26/g, '&')}`;
+						try {
+							const response = await fetch(url, { method: 'GET' });
+							if (!response.ok) throw new Error("Network error: " + response.status);
+							const text = await response.text();
+							console.log(text);
+							return text;
+						} catch (err) {
+							console.error("Pollinations.ai call failed:", err);
+							throw err;
+						}
+					} else {
+						if (!settings.API_KEY) throw new Error("API key is not set.");
+			
+						const payload = {
+							contents: [{
+								parts: [{
+									text: prompt
+								}]
+							}],
+							generationConfig: {
+								responseMimeType: "text/plain"
+							}
+						};
+			
+						const response = await fetch(`${settings.API_URL}?key=${settings.API_KEY}`, {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify(payload)
+						});
+						console.log(response);
+			
+						if (!response.ok) {
+							const errorData = await response.json();
+							throw new Error(`API error: ${response.statusText} - ${JSON.stringify(errorData)}`);
+						}
+			
+						const result = await response.json();
+			
+						if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
+							return result.candidates[0].content.parts[0].text;
+						} else {
+							console.error("API Error:", result);
+							throw new Error('Failed to get a valid response from the API.');
+						}
+					}
+				}
+			}
+						
 			
 			
 			/**
@@ -1539,172 +1615,172 @@ async function callLLM(prompt, imageData = null) {
                 return { labels, calories, protein, fat, carbs };
             };
             
-/**
- * Updates both the line chart and the pie chart with historical data.
- * @param {object} historicalData The processed historical data.
- * @param {object} targets The daily target values.
- */
-const updateCharts = (historicalData, targets) => {
-    // Logic for the line chart (your existing code)
-    const labels = Object.keys(historicalData).sort();
-    const data = {
-        labels: labels,
-        datasets: [
-            {
-                label: 'Calories (% of Target)',
-                data: labels.map(date => (historicalData[date].calories / targets.calories) * 100),
-                borderColor: 'rgb(25, 135, 84)',
-                backgroundColor: 'rgba(25, 135, 84, 0.5)',
-                tension: 0
-            },
-            {
-                label: 'Protein (% of Target)',
-                data: labels.map(date => (historicalData[date].protein / targets.protein) * 100),
-                borderColor: 'rgb(54, 162, 235)',
-                backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                tension: 0
-            },
-            {
-                label: 'Fat (% of Target)',
-                data: labels.map(date => (historicalData[date].fat / targets.fat) * 100),
-                borderColor: 'rgb(255, 159, 64)',
-                backgroundColor: 'rgba(255, 159, 64, 0.5)',
-                tension: 0
-            },
-            {
-                label: 'Carbs (% of Target)',
-                data: labels.map(date => (historicalData[date].carbs / targets.carbs) * 100),
-                borderColor: 'rgb(255, 99, 132)',
-                backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                tension: 0
-            }
-        ]
-    };
-
-    const config = {
-        type: 'line',
-        data: data,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false, // Ensures responsiveness works
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) {
-                                label += ': ';
-                            }
-                            label += Math.round(context.raw) + '%';
-                            return label;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    title: {
-                        display: true,
-                        text: 'Percentage of Daily Target (%)'
-                    },
-                    min: 0,
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
-                        }
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Date'
-                    }
-                }
-            }
-        },
-    };
-
-    if (myChart) {
-        myChart.destroy();
-    }
-    const historicalChartCanvas = document.getElementById('historical-chart');
-    myChart = new Chart(historicalChartCanvas, config);
-    
-    // Now, call the new function to update the macro pie chart
-    updateMacroPieChart(historicalData);
-};
-
-/**
- * Calculates and updates the macronutrient pie chart with historical data.
- * @param {object} historicalData The processed historical data.
- */
-const updateMacroPieChart = (historicalData) => {
-    const dates = Object.keys(historicalData);
-    if (dates.length === 0) return; // Exit if no data is available
-
-    let totalProteinCalories = 0;
-    let totalFatCalories = 0;
-    let totalCarbsCalories = 0;
-    let totalAllCalories = 0;
-
-    // Calculate total calories from each macro based on common conversion factors
-    // 1g Protein = 4 cal, 1g Fat = 9 cal, 1g Carbs = 4 cal
-    dates.forEach(date => {
-        const dayData = historicalData[date];
-        totalProteinCalories += dayData.protein * 4;
-        totalFatCalories += dayData.fat * 9;
-        totalCarbsCalories += dayData.carbs * 4;
-    });
-
-    totalAllCalories = totalProteinCalories + totalFatCalories + totalCarbsCalories;
-
-    // Calculate the percentage for each macronutrient
-    const proteinPercentage = (totalProteinCalories / totalAllCalories) * 100;
-    const fatPercentage = (totalFatCalories / totalAllCalories) * 100;
-    const carbsPercentage = (totalCarbsCalories / totalAllCalories) * 100;
-
-    const data = {
-        labels: ['Protein', 'Fat', 'Carbs'],
-        datasets: [{
-            label: 'Calories from Macronutrients',
-            data: [proteinPercentage, fatPercentage, carbsPercentage],
-            backgroundColor: [
-                'rgba(54, 162, 235, 0.8)', // Blue for Protein
-                'rgba(255, 159, 64, 0.8)', // Orange for Fat
-                'rgba(255, 99, 132, 0.8)', // Red for Carbs
-            ],
-            hoverOffset: 4
-        }]
-    };
-
-    const config = {
-        type: 'pie',
-        data: data,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                title: {
-                    display: true,
-                    text: 'Average Macronutrient Ratio'
-                }
-            }
-        }
-    };
-
-    // Destroy any existing chart instance to prevent duplicates
-    if (macroPieChart) {
-        macroPieChart.destroy();
-    }
-    const macroPieChartCanvas = document.getElementById('macro-pie-chart');
-    macroPieChart = new Chart(macroPieChartCanvas, config);
-};
+			/**
+			 * Updates both the line chart and the pie chart with historical data.
+			 * @param {object} historicalData The processed historical data.
+			 * @param {object} targets The daily target values.
+			 */
+			const updateCharts = (historicalData, targets) => {
+				// Logic for the line chart (your existing code)
+				const labels = Object.keys(historicalData).sort();
+				const data = {
+					labels: labels,
+					datasets: [
+						{
+							label: 'Calories (% of Target)',
+							data: labels.map(date => (historicalData[date].calories / targets.calories) * 100),
+							borderColor: 'rgb(25, 135, 84)',
+							backgroundColor: 'rgba(25, 135, 84, 0.5)',
+							tension: 0
+						},
+						{
+							label: 'Protein (% of Target)',
+							data: labels.map(date => (historicalData[date].protein / targets.protein) * 100),
+							borderColor: 'rgb(54, 162, 235)',
+							backgroundColor: 'rgba(54, 162, 235, 0.5)',
+							tension: 0
+						},
+						{
+							label: 'Fat (% of Target)',
+							data: labels.map(date => (historicalData[date].fat / targets.fat) * 100),
+							borderColor: 'rgb(255, 159, 64)',
+							backgroundColor: 'rgba(255, 159, 64, 0.5)',
+							tension: 0
+						},
+						{
+							label: 'Carbs (% of Target)',
+							data: labels.map(date => (historicalData[date].carbs / targets.carbs) * 100),
+							borderColor: 'rgb(255, 99, 132)',
+							backgroundColor: 'rgba(255, 99, 132, 0.5)',
+							tension: 0
+						}
+					]
+				};
+			
+				const config = {
+					type: 'line',
+					data: data,
+					options: {
+						responsive: true,
+						maintainAspectRatio: false, // Ensures responsiveness works
+						plugins: {
+							legend: {
+								position: 'top',
+							},
+							tooltip: {
+								callbacks: {
+									label: function(context) {
+										let label = context.dataset.label || '';
+										if (label) {
+											label += ': ';
+										}
+										label += Math.round(context.raw) + '%';
+										return label;
+									}
+								}
+							}
+						},
+						scales: {
+							y: {
+								title: {
+									display: true,
+									text: 'Percentage of Daily Target (%)'
+								},
+								min: 0,
+								ticks: {
+									callback: function(value) {
+										return value + '%';
+									}
+								}
+							},
+							x: {
+								title: {
+									display: true,
+									text: 'Date'
+								}
+							}
+						}
+					},
+				};
+			
+				if (myChart) {
+					myChart.destroy();
+				}
+				const historicalChartCanvas = document.getElementById('historical-chart');
+				myChart = new Chart(historicalChartCanvas, config);
+				
+				// Now, call the new function to update the macro pie chart
+				updateMacroPieChart(historicalData);
+			};
+			
+			/**
+			 * Calculates and updates the macronutrient pie chart with historical data.
+			 * @param {object} historicalData The processed historical data.
+			 */
+			const updateMacroPieChart = (historicalData) => {
+				const dates = Object.keys(historicalData);
+				if (dates.length === 0) return; // Exit if no data is available
+			
+				let totalProteinCalories = 0;
+				let totalFatCalories = 0;
+				let totalCarbsCalories = 0;
+				let totalAllCalories = 0;
+			
+				// Calculate total calories from each macro based on common conversion factors
+				// 1g Protein = 4 cal, 1g Fat = 9 cal, 1g Carbs = 4 cal
+				dates.forEach(date => {
+					const dayData = historicalData[date];
+					totalProteinCalories += dayData.protein * 4;
+					totalFatCalories += dayData.fat * 9;
+					totalCarbsCalories += dayData.carbs * 4;
+				});
+			
+				totalAllCalories = totalProteinCalories + totalFatCalories + totalCarbsCalories;
+			
+				// Calculate the percentage for each macronutrient
+				const proteinPercentage = (totalProteinCalories / totalAllCalories) * 100;
+				const fatPercentage = (totalFatCalories / totalAllCalories) * 100;
+				const carbsPercentage = (totalCarbsCalories / totalAllCalories) * 100;
+			
+				const data = {
+					labels: ['Protein', 'Fat', 'Carbs'],
+					datasets: [{
+						label: 'Calories from Macronutrients',
+						data: [proteinPercentage, fatPercentage, carbsPercentage],
+						backgroundColor: [
+							'rgba(54, 162, 235, 0.8)', // Blue for Protein
+							'rgba(255, 159, 64, 0.8)', // Orange for Fat
+							'rgba(255, 99, 132, 0.8)', // Red for Carbs
+						],
+						hoverOffset: 4
+					}]
+				};
+			
+				const config = {
+					type: 'pie',
+					data: data,
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						plugins: {
+							legend: {
+								position: 'top',
+							},
+							title: {
+								display: true,
+								text: 'Average Macronutrient Ratio'
+							}
+						}
+					}
+				};
+			
+				// Destroy any existing chart instance to prevent duplicates
+				if (macroPieChart) {
+					macroPieChart.destroy();
+				}
+				const macroPieChartCanvas = document.getElementById('macro-pie-chart');
+				macroPieChart = new Chart(macroPieChartCanvas, config);
+			};
 
 
             
