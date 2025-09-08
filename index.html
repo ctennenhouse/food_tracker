@@ -732,20 +732,22 @@
 				// Get the image data as a base64 encoded string
 				const imageData = photoCanvas.toDataURL('image/jpeg');
 				
-				// close camera pop-up
-				resetCameraModal();
 			
 				// Define the prompt for the image
-				const image_prompt = `Provide the nutritional information for the food item in this image, including an estimate for weight or volume if applicable (e.g. "45g chicken breast" or "1 cup white rice"). If the image is a bar code then search for a food product with this bar code. If you are unsure what the item is, make your best guess. Respond only with a JSON object. The JSON should have the following structure: { "food_name": "...", "calories": 0, "protein": 0, "fat": 0, "carbs": 0 }. All values should be numerical (calories, protein, fat, carbs) and represent the total for the specified serving. Do not respond with anything other than a properly formed JSON object. If you do not know the values then provide your best guess. Any other response is unacceptable.?json=true`;
+				const image_prompt = `Provide the nutritional information for the food item in this image, including an estimate for weight or volume if applicable (e.g. "45g chicken breast" or "1 cup white rice"). If you are unsure what the item is, make your best guess. If the image is text for nutritional information then assume 1 serving, parse the required information, and if the food item name is not clear use "unknown". Respond only with a JSON object. The JSON should have the following structure: { "food_name": "...", "calories": 0, "protein": 0, "fat": 0, "carbs": 0 }. All values should be numerical (calories, protein, fat, carbs) and represent the total for the specified serving. Do not respond with anything other than a properly formed JSON object. If you do not know the values then provide your best guess. Any other response is unacceptable.?json=true`;
 			
 				// Add a pending item to the list immediately
 				const pendingText = "Processing image...";
 				showMessage('Processing image...');
 				addItemBtn.disabled = true;
 				
-			
-				// Call the LLM with the prompt and image data
-				const result = await callLLM(image_prompt, imageData);
+				// Start the LLM call asynchronously without awaiting its completion.
+                const llmPromise = callLLM(image_prompt, imageData);
+                // Wait for 1 second before closing the camera pop-up.
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Now, close the camera pop-up.
+                resetCameraModal();
+				const result = await llmPromise;
 				
 				// Clear the processing message once the API call is done
 				clearMessage();
