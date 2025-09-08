@@ -1,4 +1,4 @@
-This app helps you track your daily nutritional intake by querying a large language model. Enter a food item with a quantity (e.g., "1 large banana") and the app will add it to your log and update your daily totals. All data is saved automatically in your browser's local storage.
+This app helps you track your daily nutritional intake by querying a large language model. Enter a food item with a quantity (e.g. "1 large banana") and the app will add it to your log and update your daily totals. All data is saved automatically in your browser's local storage.
 
 This application uses an LLM API to get nutritional information. Clicking the default button will auto-fill a link to pollinations.ai which doesn't require a key. If you don't know what an API key is, then just click `default`. To use a custom API key, you can get one for free from here: https://aistudio.google.com/app/apikey. You get more than enough free calls per day with Gemini. 
 
