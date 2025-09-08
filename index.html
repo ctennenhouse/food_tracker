@@ -78,9 +78,12 @@
             <div class="flex items-center justify-between">
 
 			<div class="flex items-center justify-between mb-4">
-				<h1 class="flex-1 text-2xl sm:text-3xl font-bold text-center text-emerald-600">
-					Nutrition Tracker
-				</h1>				
+				<div class="flex-1 flex justify-center items-center gap-2">
+					<h1 class="text-2xl sm:text-3xl font-bold text-center text-emerald-600">
+						Nutrition Tracker
+					</h1>
+					<span id="version-display-main" class="text-base text-gray-800 font-normal"></span>
+				</div>			
 				<div class="absolute top-2 right-4 flex items-center gap-2">
 				<!---README.md link--->
 				<a href="https://github.com/ctennenhouse/food_tracker/blob/main/README.md" target="_blank" class="py-1 px-3 bg-gray-800 text-white rounded-xl hover:bg-gray-900 transition-colors duration-200 flex items-center justify-center">
@@ -414,7 +417,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- Global Variables and Constants ---
-            const APP_VERSION = '3.8';
+            const APP_VERSION = '3.9';
             //const DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
             const DEFAULT_API_URL = "https://text.pollinations.ai";
             
@@ -773,6 +776,10 @@
             
             // update the version number
             versionDisplayEl.textContent = `Version: v${APP_VERSION}`;
+			const mainVersionDisplayEl = document.getElementById('version-display-main');
+			if (mainVersionDisplayEl) {
+				mainVersionDisplayEl.textContent = `v${APP_VERSION}`;
+			}            
             
             // --- Helper Functions ---
             
@@ -1424,6 +1431,11 @@
 					API_URL: API_URL,
 					API_KEY: API_KEY
 				};
+				
+				apiRequests.count++;
+				localStorage.setItem('apiRequests', JSON.stringify(apiRequests));
+				apiRequestCountEl.textContent = apiRequests.count;	
+				console.log(apiRequests);					
 			
 				if (imageData) {
 					console.log("Image data found");
@@ -1558,7 +1570,7 @@
 							throw new Error('Failed to get a valid response from the API.');
 						}
 					}
-				}
+				}		
 			}
 						
 			
@@ -1575,10 +1587,13 @@
 				if (apiRequests.date !== today) {
 					apiRequests = { count: 0, date: today };
 				}
+				/*
+				* moved this block to callLLM
 				apiRequests.count++;
 				localStorage.setItem('apiRequests', JSON.stringify(apiRequests));
 				apiRequestCountEl.textContent = apiRequests.count;
-			
+				*/
+				
 				try {
 					const llmResponse = await callLLM(prompt);
 					
