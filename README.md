@@ -1,14 +1,14 @@
 This app helps you track your daily nutritional intake by querying a large language model. Enter a food item with a quantity (e.g., "1 large banana") and the app will add it to your log and update your daily totals. All data is saved automatically in your browser's local storage.
 
-This application can use the Gemini API (or another LLM API) to get nutritional information. To use a custom API key, you can get one for free from here: https://aistudio.google.com/app/apikey. You get more than enough free calls per day with Gemini. 
-Clicking the default button will auto-fill a link to pollinations.ai which doesn't require a key, but is not as accurate. If you don't know what an API key is, then just click `default`.
+This application uses an LLM API to get nutritional information. Clicking the default button will auto-fill a link to pollinations.ai which doesn't require a key. If you don't know what an API key is, then just click `default`. To use a custom API key, you can get one for free from here: https://aistudio.google.com/app/apikey. You get more than enough free calls per day with Gemini. 
+
 
 ## Main page
 - Click through to see previous days
 - Daily counts and targets are displayed. If you use Macrodroid or Tasker then you can grab the screen contents easily.
 - Enter any food item in plain English, e.g.`a small bowl of cereal with milk`, `2 slices of bacon`, `a very greasy slice of cheese pizza`, `35g grilled chicken breast` and either click `Add Item` or just enter on your keyboard.
 - You can also submit multiple items separated by commas as a single entry, like `3 pancakes, a cheeseburger, four tacos, and a diet coke`, though the data returned will be less accurate.
-- Version 3.5 added camera support. Try to keep your food in clear view without other objects in the shot. Not all LLM APIs accept images.
+- Version 3.5 added camera support. Try to keep your food in clear view without other objects in the shot, or take a photo of the nutrition label and the values should populate. Not all LLM APIs accept images.
 - The entry is immediately listed as `pending` and a call is made to the LLM API to fill out the calories and macros.
 - If an item seems stuck as `pending` you can click it to try again.
 - If there are data errors - either the LLM isn't returning properly formed data or your connection is weak - then you can edit an item to manually add data.
