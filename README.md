@@ -13,7 +13,7 @@ This application uses an LLM API to get nutritional information. Clicking the de
 - If an item seems stuck as `pending` you can click it to try again.
 - If there are data errors - either the LLM isn't returning properly formed data or your connection is weak - then you can edit an item to manually add data.
 - If you change the name of a previously added food item then it's re-sent to the LLM for recalculation.
-- `Analyze My Data` will send you entire saved history and entered goals to the LLM to provide a (hopefully) gentle, positive analysis of your eating habits. If you have a history of disordered eating then this is best done in consultation with your doctor and therapist, not with an app.
+- `Analyze My Data` will send your entire saved history and entered goals to the LLM to provide a (hopefully) gentle, positive analysis of your eating habits. If you have a history of disordered eating then this is best done in consultation with your doctor and therapist, not with an app.
   - This won't be very useful until you have at least a couple weeks of data.
 
 
