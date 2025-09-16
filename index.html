@@ -1021,7 +1021,7 @@
           const imageData = photoCanvas.toDataURL("image/jpeg");
 
           // Define the prompt for the image
-          const image_prompt = `Provide the nutritional information for the food in this image, including an estimate for weight or volume if applicable using objects in view for scale (e.g. "45g chicken breast" or "1 cup white rice"). Your primary source should be the USDA FoodData Central database. If you are unsure what the item is, make your best guess based on similar foods. If the image is text for nutritional information then assume 1 serving, parse the required information, and if the food item name is not clear use "unknown". Respond only with a JSON object. The JSON should have the following structure: { "food_name": "...", "calories": 0, "protein": 0, "fat": 0, "carbs": 0 }. All values should be numerical (calories, protein, fat, carbs) and represent the total for the specified serving. Do not respond with anything other than a properly formed JSON object. If you do not know the values then provide your best guess. Any other response is unacceptable.?json=true`;
+          const image_prompt = `Provide the nutritional information for the food in this image. If there are multiple food items, provide the total for all items combined. If an image is of a nutritional label, assume one serving and parse the information. Respond only with a JSON object. The JSON should have the following structure: { "food_name": "...", "calories": 0, "protein": 0, "fat": 0, "carbs": 0 }. All values should be numerical and represent a total for the specified food(s). Do not respond with anything other than a properly formed JSON object.`;
 
           // Add a pending item to the list immediately
           const pendingText = "Processing image...";
@@ -1908,7 +1908,7 @@
          * @returns {Promise<object>} A promise that resolves to an object with nutritional data.
          */
         const getNutritionData = async (foodQuery) => {
-          const prompt = `Provide the nutritional information for "${foodQuery}". Your primary source should be the USDA FoodData Central database. Respond only with a JSON object. The JSON should have the following structure: { "food_name": "...", "calories": 0, "protein": 0, "fat": 0, "carbs": 0 }. All values should be numerical (calories, protein, fat, carbs) and represent the total for the specified serving. Do not respond with anything other than a properly formed JSON object. If you do not know the values then provide your best guess based on similar foods. Any other response is unacceptable.?json=true`;
+        const prompt = `Provide the nutritional information for "${foodQuery}". If the query specifies a weight, volume, or multiple food items, calculate the total for all items combined. Respond only with a JSON object. The JSON should have the following structure: { "food_name": "...", "calories": 0, "protein": 0, "fat": 0, "carbs": 0 }. All values should be numerical and represent the total for the specified food(s). Do not respond with anything other than a properly formed JSON object.`;
 
           const today = formatDate(new Date());
           if (apiRequests.date !== today) {
