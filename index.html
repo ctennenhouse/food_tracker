@@ -493,6 +493,13 @@
           >
             Save API Settings
           </button>
+          
+          <button
+			  id="test-api-btn"
+			  class="mt-4 w-full p-3 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-600 transition-colors duration-200"
+			>
+			  Test API
+		</button>
         </div>
 
         <div class="mb-6">
@@ -684,10 +691,23 @@
       </div>
     </div>
 
+
+		// Popup window showing api test        
+		<div id="test-api-popup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4);">
+		  <div style="background:white; margin:10% auto; padding:20px; width:80%; max-width:500px; border-radius:8px;">
+			<pre id="test-api-response" style="white-space:pre-wrap;"></pre>
+			<button
+  id="close-test-api-popup"
+  class="mt-4 w-full p-3 bg-emerald-500 text-white rounded-xl font-semibold hover:bg-emerald-600 transition-colors duration-200"
+>Close</button>
+		  </div>
+		</div>
+		
+		
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         // --- Global Variables and Constants ---
-        const APP_VERSION = "3.10";
+        const APP_VERSION = "3.6";
         //const DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
         const DEFAULT_API_URL = "https://text.pollinations.ai";
 
@@ -792,6 +812,8 @@
         const saveApiSettingsBtn = document.getElementById(
           "save-api-settings-btn",
         );
+        const testApiBtn = document.getElementById("test-api-btn");
+
         const useCacheCheckbox = document.getElementById("use-cache-checkbox"); // New checkbox
 
         const currentDateEl = document.getElementById("current-date");
@@ -2693,6 +2715,8 @@
             .classList.add("hidden");
         });
 
+        
+
         // Event delegation for delete and edit buttons
         foodListContainer.addEventListener("click", async (e) => {
           const deleteBtn = e.target.closest(".delete-item-btn");
@@ -2917,6 +2941,27 @@
           showMessage("API settings saved!", 2000);
           console.log(`Saved API settings`, 2000);
         });
+        
+        // Test API button listener
+		testApiBtn.addEventListener("click", async () => {
+		  const prompt = `Provide the nutritional information for "2 eggs and a slice of sourdough bread with butter and jam". If the query specifies a weight, volume, or multiple food items, calculate the total for all items combined. Respond only with a JSON object. The JSON should have the following structure: { "food_name": "...", "calories": 0, "protein": 0, "fat": 0, "carbs": 0 }. All values should be numerical and represent the total for the specified food(s). Do not respond with anything other than a properly formed JSON object. Any other response is unacceptable.`;
+		
+		  try {
+			const output = await callLLM(prompt);
+			document.getElementById("test-api-response").textContent = output;
+			document.getElementById("test-api-popup").style.display = "block";
+		  } catch (err) {
+			document.getElementById("test-api-response").textContent = "Error: " + err;
+			document.getElementById("test-api-popup").style.display = "block";
+		  }
+		});
+        
+		document
+		  .getElementById("close-test-api-popup")
+		  .addEventListener("click", () => {
+			document.getElementById("test-api-popup").style.display = "none";
+		  });
+        
 
         // "Default URL" button listener
         defaultApiUrlBtn.addEventListener("click", () => {
