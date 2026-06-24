@@ -434,8 +434,27 @@
           </p>
         </div>
 
-        <div class="mb-6">
+<div class="mb-6">
           <h3 class="font-bold text-lg mb-2">API Settings</h3>
+          <div class="mb-3">
+            <label for="saved-environments-select" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Saved Environments</label>
+            <div class="flex gap-2">
+              <select
+                id="saved-environments-select"
+                class="flex-1 p-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+              >
+                <option value="">-- No Saved Environment --</option>
+              </select>
+              <button
+                type="button"
+                id="delete-environment-btn"
+                class="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-xl transition-colors duration-200 text-sm"
+                title="Delete selected environment"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
           <div class="flex items-center gap-2 mb-2">
             <button
               id="default-api-url-btn"
@@ -692,7 +711,7 @@
     </div>
 
 
-		<!-- Popup window showing api test -->
+		// Popup window showing api test        
 		<div id="test-api-popup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4);">
 		  <div style="background:white; margin:10% auto; padding:20px; width:80%; max-width:500px; border-radius:8px;">
 			<pre id="test-api-response" style="white-space:pre-wrap;"></pre>
@@ -707,7 +726,7 @@
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         // --- Global Variables and Constants ---
-        const APP_VERSION = "3.6";
+        const APP_VERSION = "3.7";
         //const DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
         const DEFAULT_API_URL = "https://text.pollinations.ai";
 
@@ -806,7 +825,71 @@
         const loadDataInput = document.getElementById("load-data-input");
 
         // API Settings DOM elements
-        const apiUrlInput = document.getElementById("api-url-input");
+		const apiUrlInput = document.getElementById("api-url-input");
+
+        // --- Saved Environments Infrastructure ---
+        let savedEnvironments = [];
+        const savedEnvSelect = document.getElementById("saved-environments-select");
+        const deleteEnvBtn = document.getElementById("delete-environment-btn");
+
+        const updateEnvironmentsDropdown = () => {
+          savedEnvSelect.innerHTML = '<option value="">-- No Saved Environment --</option>';
+          savedEnvironments.forEach((env, index) => {
+            const option = document.createElement("option");
+            option.value = index;
+            const shortKey = env.key.length > 8 ? env.key.substring(0, 8) + "..." : env.key;
+            option.textContent = `${env.url} (${shortKey})`;
+            savedEnvSelect.appendChild(option);
+          });
+        };
+
+        const loadSavedEnvironments = () => {
+          try {
+            const cached = localStorage.getItem("savedApiEnvironments");
+            if (cached) {
+              savedEnvironments = JSON.parse(cached);
+            }
+            updateEnvironmentsDropdown();
+          } catch (e) {
+            console.error("Failed to load saved environments:", e);
+            savedEnvironments = [];
+          }
+        };
+
+        // Autofill inputs when selecting a choice from the dropdown
+        savedEnvSelect.addEventListener("change", (e) => {
+          const index = e.target.value;
+          if (index !== "") {
+            const selectedEnv = savedEnvironments[index];
+            if (apiUrlInput) apiUrlInput.value = selectedEnv.url;
+            if (apiKeyInput) apiKeyInput.value = selectedEnv.key;
+          }
+        });
+
+		// Delete button logic
+        deleteEnvBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          
+          const currentUrl = apiUrlInput.value.trim();
+          const currentKey = apiKeyInput ? apiKeyInput.value.trim() : "";
+
+          // Remove only the item matching the current text inputs
+          savedEnvironments = savedEnvironments.filter(
+            env => !(env.url === currentUrl && env.key === currentKey)
+          );
+
+          // Save the updated list back to localStorage
+          localStorage.setItem("savedApiEnvironments", JSON.stringify(savedEnvironments));
+          
+          // Refresh the dropdown choices
+          updateEnvironmentsDropdown();
+          savedEnvSelect.value = "";
+          
+          // Clear the text inputs
+          if (apiUrlInput) apiUrlInput.value = "";
+          if (apiKeyInput) apiKeyInput.value = "";
+        });
+        
         const apiKeyInput = document.getElementById("api-key-input");
         const currentApiKeyEl = document.getElementById("current-api-key");
         const saveApiSettingsBtn = document.getElementById(
@@ -1746,17 +1829,23 @@
           }
         };
 
-        /**
+
+
+
+
+
+
+		/**
          * Calls a text-based LLM API with the given prompt.
-         * It dynamically handles both traditional API formats and Pollinations.ai.
+         * It dynamically handles local setups, traditional Gemini payloads, and Pollinations.ai.
          * @param {string} prompt The text prompt to send to the LLM.
          * @param {string} [imageData=null] The image data URL to send for image analysis.
          * @returns {Promise<string>} A promise that resolves to the LLM's raw text response.
          */
         async function callLLM(prompt, imageData = null) {
           const settings = {
-            API_URL: API_URL,
-            API_KEY: API_KEY,
+            API_URL: API_URL.trim(),
+            API_KEY: API_KEY.trim(),
           };
 
           apiRequests.count++;
@@ -1764,28 +1853,18 @@
           apiRequestCountEl.textContent = apiRequests.count;
           console.log(apiRequests);
 
-          if (imageData) {
-            console.log("Image data found");
-            if (settings.API_URL.includes("pollinations")) {
-              const { base64, mimeType } = dataURLtoBase64AndMime(imageData);
-              const imageFormat = mimeType.split("/")[1].toLowerCase();
-
+          // 1. POLLINATIONS.AI PIPELINE (Special Case)
+          if (settings.API_URL.includes("pollinations")) {
+            if (imageData) {
+              console.log("Image data found for Pollinations");
               const payload = {
                 model: "openai",
                 messages: [
                   {
                     role: "user",
                     content: [
-                      {
-                        type: "text",
-                        text: prompt,
-                      },
-                      {
-                        type: "image_url",
-                        image_url: {
-                          url: imageData, // Use the full data URL string directly
-                        },
-                      },
+                      { type: "text", text: prompt },
+                      { type: "image_url", image_url: { url: imageData } },
                     ],
                   },
                 ],
@@ -1799,15 +1878,10 @@
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify(payload),
                 });
-                console.log(response);
-
                 if (!response.ok) {
                   const errorText = await response.text();
-                  throw new Error(
-                    `API error: ${response.statusText} - ${errorText}`,
-                  );
+                  throw new Error(`API error: ${response.statusText} - ${errorText}`);
                 }
-
                 const result = await response.json();
                 return result.choices[0].message.content;
               } catch (err) {
@@ -1815,115 +1889,136 @@
                 throw err;
               }
             } else {
-              // standard API call for image analysis
-              if (!settings.API_KEY) throw new Error("API key is not set.");
-              const { base64, mimeType } = dataURLtoBase64AndMime(imageData);
-
-              const payload = {
-                contents: [
-                  {
-                    parts: [
-                      { text: prompt },
-                      { inlineData: { mimeType, data: base64 } },
-                    ],
-                  },
-                ],
-              };
-
-              const url = `${settings.API_URL}?key=${settings.API_KEY}`;
-              try {
-                const response = await fetch(url, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payload),
-                });
-                console.log(response);
-
-                if (!response.ok) {
-                  const errorData = await response.json();
-                  throw new Error(
-                    `API error: ${response.statusText} - ${JSON.stringify(errorData)}`,
-                  );
-                }
-
-                const result = await response.json();
-
-                if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
-                  return result.candidates[0].content.parts[0].text;
-                } else {
-                  console.error("API Error:", result);
-                  throw new Error(
-                    "Failed to get a valid response from the API.",
-                  );
-                }
-              } catch (err) {
-                console.error("API call with image failed:", err);
-                throw err;
-              }
-            }
-          } else {
-            // No image data, proceed with the original text-only logic
-            console.log("No image data found");
-            if (settings.API_URL.includes("pollinations")) {
+              console.log("No image data found for Pollinations");
               const url = `${settings.API_URL}/${encodeURIComponent(prompt).replace(/%3F/g, "?").replace(/%3D/g, "=").replace(/%26/g, "&")}`;
               try {
                 const response = await fetch(url, { method: "GET" });
-                if (!response.ok)
-                  throw new Error("Network error: " + response.status);
+                if (!response.ok) throw new Error("Network error: " + response.status);
                 const text = await response.text();
-                console.log(text);
                 return text;
               } catch (err) {
                 console.error("Pollinations.ai call failed:", err);
                 throw err;
               }
-            } else {
-              if (!settings.API_KEY) throw new Error("API key is not set.");
+            }
+          }
 
-              const payload = {
-                contents: [
-                  {
-                    parts: [
-                      {
-                        text: prompt,
-                      },
-                    ],
-                  },
-                ],
-                generationConfig: {
-                  responseMimeType: "text/plain",
-                },
+          // Determine if we should use the legacy native Gemini schema or universal OpenAI format.
+          const isNativeGeminiFormat = settings.API_URL.includes("generativelanguage.googleapis.com/v1") && !settings.API_URL.includes("openai");
+
+          // 2. NATIVE GEMINI API PIPELINE
+          if (isNativeGeminiFormat) {
+            if (!settings.API_KEY) throw new Error("API key is not set.");
+            const url = `${settings.API_URL}?key=${settings.API_KEY}`;
+            
+            let payload;
+            if (imageData) {
+              const { base64, mimeType } = dataURLtoBase64AndMime(imageData);
+              payload = {
+                contents: [{
+                  parts: [
+                    { text: prompt },
+                    { inlineData: { mimeType, data: base64 } },
+                  ],
+                }],
               };
+            } else {
+              payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "text/plain" },
+              };
+            }
 
-              const response = await fetch(
-                `${settings.API_URL}?key=${settings.API_KEY}`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(payload),
-                },
-              );
-              console.log(response);
-
+            try {
+              const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+              });
               if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(
-                  `API error: ${response.statusText} - ${JSON.stringify(errorData)}`,
-                );
+                throw new Error(`API error: ${response.statusText} - ${JSON.stringify(errorData)}`);
               }
-
               const result = await response.json();
-
               if (result.candidates?.[0]?.content?.parts?.[0]?.text) {
                 return result.candidates[0].content.parts[0].text;
               } else {
-                console.error("API Error:", result);
-                throw new Error("Failed to get a valid response from the API.");
+                throw new Error("Failed to get a valid response from the Gemini API.");
               }
+            } catch (err) {
+              console.error("Native Gemini API call failed:", err);
+              throw err;
             }
           }
-        }
 
+          // 3. UNIVERSAL OPENAI-COMPATIBLE PIPELINE (Handles local servers and modern commercial clouds)
+          // Determine local context: if it contains a port colon before protocol mapping or is localhost/local domain
+          const isLocal = settings.API_URL.includes("localhost") || 
+                          settings.API_URL.includes("127.0.0.1") || 
+                          settings.API_URL.includes(".local") ||
+                          (!settings.API_URL.startsWith("http://") && !settings.API_URL.startsWith("https://") && settings.API_URL.includes(":"));
+
+          let baseHost = settings.API_URL;
+          if (!baseHost.startsWith("http://") && !baseHost.startsWith("https://")) {
+            baseHost = "http://" + baseHost;
+          }
+          baseHost = baseHost.replace(/\/+$/, "");
+          
+          const universalUrl = baseHost.includes("/v1") ? `${baseHost}/chat/completions` : `${baseHost}/v1/chat/completions`;
+
+          const messages = [{ role: "user", content: prompt }];
+          if (imageData) {
+            messages[0].content = [
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: imageData } }
+            ];
+          }
+
+          const openAiPayload = {
+            // For local models, the API KEY field contains the explicit model name string
+            model: isLocal ? (settings.API_KEY || "default") : "default",
+            messages: messages,
+            temperature: 0.2
+          };
+
+          const headers = { "Content-Type": "application/json" };
+          
+          // Only pass Authorization header tokens when interacting with explicit non-local cloud deployments
+          if (!isLocal && settings.API_KEY) {
+            headers["Authorization"] = `Bearer ${settings.API_KEY}`;
+          }
+
+          try {
+            const response = await fetch(universalUrl, {
+              method: "POST",
+              headers: headers,
+              body: JSON.stringify(openAiPayload),
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`HTTP Error: ${response.status} ${response.statusText} - ${errorText}`);
+            }
+
+            const result = await response.json();
+            if (result.choices?.[0]?.message?.content) {
+              return result.choices[0].message.content;
+            } else if (result.response) {
+              return result.response;
+            } else {
+              throw new Error("Unexpected API JSON structure returned.");
+            }
+          } catch (err) {
+            console.error("Universal endpoint call failed:", err);
+            throw err;
+          }
+        }
+        
+        
+        
+        
+        
+        
         /**
          * Calls the LLM API to get nutritional information for a food query.
          * @param {string} foodQuery The user's food entry string.
@@ -2338,6 +2433,7 @@
 
         // Load saved data and initialize the app
         const initializeApp = async () => {
+          loadSavedEnvironments(); // load API URL/KEY pairs
           const savedEntries = localStorage.getItem("allFoodEntries");
           if (savedEntries) {
             try {
@@ -2398,6 +2494,8 @@
           if (savedApiUrl) {
             API_URL = savedApiUrl;
           }
+		  // Load the saved environments from localStorage
+          loadSavedEnvironments();          
 
           currentDateEl.textContent = formatDisplayDate(currentDate);
           renderFoodList();
@@ -2914,33 +3012,44 @@
           }
         });
 
-        // Save API settings button listener
-        saveApiSettingsBtn.addEventListener("click", () => {
-          console.log("Save button clicked!"); // Add this line
-          const newApiUrl = apiUrlInput.value.trim();
-          const newApiKey = apiKeyInput.value.trim();
-          const newUseCache = useCacheCheckbox.checked;
-          console.log(newApiUrl);
-
-          if (newApiUrl) {
-            API_URL = newApiUrl;
-            localStorage.setItem("apiUrl", API_URL);
-            console.log(API_URL);
-          }
-
-          if (newApiKey) {
-            API_KEY = newApiKey;
-            localStorage.setItem("apiKey", API_KEY);
-          }
-
-          // Update and save the cache setting
-          useFoodCache = newUseCache;
-          localStorage.setItem("useFoodCache", useFoodCache);
-
-          updateSettingsUI();
-          showMessage("API settings saved!", 2000);
-          console.log(`Saved API settings`, 2000);
-        });
+		// Save API settings button listener
+				saveApiSettingsBtn.addEventListener("click", () => {
+				  console.log("Save button clicked!");
+				  const newApiUrl = apiUrlInput.value.trim();
+				  const newApiKey = apiKeyInput.value.trim();
+				  const newUseCache = useCacheCheckbox.checked;
+				  console.log(newApiUrl);
+		
+				  if (newApiUrl) {
+					API_URL = newApiUrl;
+					localStorage.setItem("apiUrl", API_URL);
+					console.log(API_URL);
+				  }
+		
+				  if (newApiKey) {
+					API_KEY = newApiKey;
+					localStorage.setItem("apiKey", API_KEY);
+				  }
+		
+				  // Save into the environments dropdown list if it doesn't already exist
+				  if (newApiUrl) {
+					const alreadyExists = savedEnvironments.some(env => env.url === newApiUrl && env.key === newApiKey);
+					if (!alreadyExists) {
+					  savedEnvironments.push({ url: newApiUrl, key: newApiKey });
+					  localStorage.setItem("savedApiEnvironments", JSON.stringify(savedEnvironments));
+					  updateEnvironmentsDropdown();
+					  savedEnvSelect.value = savedEnvironments.length - 1;
+					}
+				  }
+		
+				  // Update and save the cache setting
+				  useFoodCache = newUseCache;
+				  localStorage.setItem("useFoodCache", useFoodCache);
+		
+				  updateSettingsUI();
+				  showMessage("API settings saved!", 2000);
+				  console.log(`Saved API settings`, 2000);
+				});
         
         // Test API button listener
 		testApiBtn.addEventListener("click", async () => {
@@ -3090,6 +3199,93 @@
         // Initial call to set up the app on page load
         initializeApp();
       });
+      
+// --- Saved Environments State & Core Elements ---
+        let savedEnvironments = [];
+        const savedEnvSelect = document.getElementById("saved-environments-select");
+        const deleteEnvBtn = document.getElementById("delete-environment-btn");
+        const apiUrlInput = document.getElementById("api-url-input");
+        // Note: If you have an API key input field, ensure its ID matches here
+        const apiKeyInput = document.getElementById("api-key-input") || document.getElementById("api-key");
+
+        /** Renders the environment options into the dropdown selection */
+        const updateEnvironmentsDropdown = () => {
+          savedEnvSelect.innerHTML = '<option value="">-- No Saved Environment --</option>';
+          savedEnvironments.forEach((env, index) => {
+            const option = document.createElement("option");
+            option.value = index;
+            const shortKey = env.key && env.key.length > 8 ? env.key.substring(0, 8) + "..." : (env.key || "No Key");
+            option.textContent = `${env.url} (${shortKey})`;
+            savedEnvSelect.appendChild(option);
+          });
+        };
+
+        /** Loads the saved environments array from local storage */
+        const loadSavedEnvironments = () => {
+          try {
+            const cached = localStorage.getItem("savedApiEnvironments");
+            if (cached) {
+              savedEnvironments = JSON.parse(cached);
+            }
+            updateEnvironmentsDropdown();
+          } catch (e) {
+            console.error("Failed to load saved environments:", e);
+            savedEnvironments = [];
+          }
+        };
+
+        /** Automatically saves the current URL/Key pair to the profile array */
+        const saveCurrentEnvironment = () => {
+          const currentUrl = apiUrlInput ? apiUrlInput.value.trim() : "";
+          const currentKey = apiKeyInput ? apiKeyInput.value.trim() : "";
+
+          if (!currentUrl) return;
+
+          // Avoid saving exact duplicate entries
+          const alreadyExists = savedEnvironments.some(env => env.url === currentUrl && env.key === currentKey);
+          if (!alreadyExists) {
+            savedEnvironments.push({ url: currentUrl, key: currentKey });
+            localStorage.setItem("savedApiEnvironments", JSON.stringify(savedEnvironments));
+            updateEnvironmentsDropdown();
+            savedEnvSelect.value = savedEnvironments.length - 1;
+          }
+        };
+
+        // --- Dropdown Event Listeners ---
+
+        // Autofill inputs when a user selects a profile
+        savedEnvSelect.addEventListener("change", (e) => {
+          const index = e.target.value;
+          if (index !== "") {
+            const selectedEnv = savedEnvironments[index];
+            if (apiUrlInput) {
+              apiUrlInput.value = selectedEnv.url;
+              apiUrlInput.dispatchEvent(new Event('input'));
+              apiUrlInput.dispatchEvent(new Event('change'));
+            }
+            if (apiKeyInput) {
+              apiKeyInput.value = selectedEnv.key;
+              apiKeyInput.dispatchEvent(new Event('input'));
+              apiKeyInput.dispatchEvent(new Event('change'));
+            }
+          }
+        });
+
+        // Delete the selected profile from the dropdown array list
+        deleteEnvBtn.addEventListener("click", () => {
+          const index = savedEnvSelect.value;
+          if (index === "") {
+            alert("Please select a saved environment from the dropdown to delete.");
+            return;
+          }
+
+          savedEnvironments.splice(index, 1);
+          localStorage.setItem("savedApiEnvironments", JSON.stringify(savedEnvironments));
+          updateEnvironmentsDropdown();
+          savedEnvSelect.value = "";
+        });      
+      
+      
     </script>
   </body>
 </html>
