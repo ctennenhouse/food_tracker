@@ -330,6 +330,7 @@
 
       <div id="food-list-container" class="space-y-4"></div>
 
+<!--
       <div id="analyze-button-container" class="flex justify-center mt-6 mb-6">
         <button
           id="analyze-data-btn"
@@ -338,6 +339,7 @@
           Analyze My Data
         </button>
       </div>
+-->
 
       <div
         id="message-box"
@@ -727,7 +729,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         // --- Global Variables and Constants ---
         
-        const APP_VERSION = "3.7";
+        const APP_VERSION = "3.8";
         //const DEFAULT_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent";
         const DEFAULT_API_URL = "https://text.pollinations.ai";
 
@@ -801,7 +803,7 @@
         const dailyFoodList = document.getElementById("daily-food-list");
         const genericModal = document.getElementById("generic-modal");
         const modalContent = document.getElementById("modal-content");
-        const analyzeDataBtn = document.getElementById("analyze-data-btn");
+        //const analyzeDataBtn = document.getElementById("analyze-data-btn");
         const analysisContentEl = document.getElementById("analysis-content");
         const historicalChartCanvas =
           document.getElementById("historical-chart");
