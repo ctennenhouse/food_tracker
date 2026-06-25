@@ -330,8 +330,8 @@
 
       <div id="food-list-container" class="space-y-4"></div>
 
-<!--
-      <div id="analyze-button-container" class="flex justify-center mt-6 mb-6">
+<!-- commenting to hide button, see class="hidden" below
+      <div id="analyze-button-container" class="flex justify-center mt-6 mb-6"> 
         <button
           id="analyze-data-btn"
           class="w-full sm:w-auto p-3 sm:p-4 bg-indigo-500 text-white rounded-xl font-semibold hover:bg-indigo-600 transition-all duration-200 shadow-md"
@@ -339,7 +339,10 @@
           Analyze My Data
         </button>
       </div>
--->
+-->  
+	  <div id="analyze-button-container" class="hidden"> 
+        <button id="analyze-data-btn"></button>
+      </div>
 
       <div
         id="message-box"
@@ -803,7 +806,7 @@
         const dailyFoodList = document.getElementById("daily-food-list");
         const genericModal = document.getElementById("generic-modal");
         const modalContent = document.getElementById("modal-content");
-        //const analyzeDataBtn = document.getElementById("analyze-data-btn");
+        const analyzeDataBtn = document.getElementById("analyze-data-btn");
         const analysisContentEl = document.getElementById("analysis-content");
         const historicalChartCanvas =
           document.getElementById("historical-chart");
