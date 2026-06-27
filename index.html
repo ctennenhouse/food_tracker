@@ -1841,7 +1841,10 @@
 
 
 
-		/**
+
+
+
+/**
          * Calls a text-based LLM API with the given prompt.
          * It dynamically handles local setups, traditional Gemini payloads, and Pollinations.ai.
          * @param {string} prompt The text prompt to send to the LLM.
@@ -1857,7 +1860,7 @@
           apiRequests.count++;
           localStorage.setItem("apiRequests", JSON.stringify(apiRequests));
           apiRequestCountEl.textContent = apiRequests.count;
-          console.log(apiRequests);
+          console.log("Total API Requests counter:", apiRequests);
 
           // 1. POLLINATIONS.AI PIPELINE (Special Case)
           if (settings.API_URL.includes("pollinations")) {
@@ -1877,11 +1880,17 @@
                 max_tokens: 500,
               };
 
-              const url = `https://text.pollinations.ai/openai`;
+              const url = `https://gen.pollinations.ai/v1/chat/completions`;
+              const pollinationsHeaders = { "Content-Type": "application/json" };
+              
+              if (settings.API_KEY) {
+                pollinationsHeaders["Authorization"] = `Bearer ${settings.API_KEY}`;
+              }
+
               try {
                 const response = await fetch(url, {
                   method: "POST",
-                  headers: { "Content-Type": "application/json" },
+                  headers: pollinationsHeaders,
                   body: JSON.stringify(payload),
                 });
                 if (!response.ok) {
@@ -1917,25 +1926,32 @@
             if (!settings.API_KEY) throw new Error("API key is not set.");
             const url = `${settings.API_URL}?key=${settings.API_KEY}`;
             
-            let payload;
-            if (imageData) {
-              const { base64, mimeType } = dataURLtoBase64AndMime(imageData);
-              payload = {
-                contents: [{
-                  parts: [
-                    { text: prompt },
-                    { inlineData: { mimeType, data: base64 } },
-                  ],
-                }],
-              };
-            } else {
-              payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { responseMimeType: "text/plain" },
-              };
-            }
-
             try {
+              let payload;
+              if (imageData) {
+                // Parse out the base64 and mime-type safely inside the try block
+                const matches = imageData.match(/^data:([^;]+);base64,(.+)$/);
+                if (!matches) {
+                  throw new Error("Invalid image data URL format for Gemini pipeline.");
+                }
+                const mimeType = matches[1];
+                const base64 = matches[2];
+
+                payload = {
+                  contents: [{
+                    parts: [
+                      { text: prompt },
+                      { inlineData: { mimeType, data: base64 } },
+                    ],
+                  }],
+                };
+              } else {
+                payload = {
+                  contents: [{ parts: [{ text: prompt }] }],
+                  generationConfig: { responseMimeType: "text/plain" },
+                };
+              }
+
               const response = await fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1958,12 +1974,7 @@
           }
 
           // 3. UNIVERSAL OPENAI-COMPATIBLE PIPELINE (Handles local servers and modern commercial clouds)
-          // Determine local context: if it contains a port colon before protocol mapping or is localhost/local domain
-          const isLocal = settings.API_URL.includes("localhost") || 
-                          settings.API_URL.includes("127.0.0.1") || 
-                          settings.API_URL.includes(".local") ||
-                          (!settings.API_URL.startsWith("http://") && !settings.API_URL.startsWith("https://") && settings.API_URL.includes(":"));
-
+          console.log("=== Debugging Section 3 Endpoint ===");
           let baseHost = settings.API_URL;
           if (!baseHost.startsWith("http://") && !baseHost.startsWith("https://")) {
             baseHost = "http://" + baseHost;
@@ -1971,42 +1982,57 @@
           baseHost = baseHost.replace(/\/+$/, "");
           
           const universalUrl = baseHost.includes("/v1") ? `${baseHost}/chat/completions` : `${baseHost}/v1/chat/completions`;
+          console.log("Targeting Outbound URL:", universalUrl);
+
+          const isLocalTarget = settings.API_URL.includes("localhost") || 
+                                settings.API_URL.includes("127.0.0.1") || 
+                                settings.API_URL.includes(".local") || 
+                                settings.API_URL.includes("ts.net");
+          console.log("Is target identified as local?", isLocalTarget);
 
           const messages = [{ role: "user", content: prompt }];
           if (imageData) {
+            console.log("Image payload present. Original data string snippet:", imageData.substring(0, 50) + "...");
             messages[0].content = [
               { type: "text", text: prompt },
               { type: "image_url", image_url: { url: imageData } }
             ];
+          } else {
+            console.log("Text-only configuration running.");
           }
 
           const openAiPayload = {
-            // For local models, the API KEY field contains the explicit model name string
-            model: isLocal ? (settings.API_KEY || "default") : "default",
+            model: settings.API_KEY || "default",
             messages: messages,
             temperature: 0.2
           };
+          console.log("Constructed JSON Payload:", JSON.stringify(openAiPayload, null, 2));
 
           const headers = { "Content-Type": "application/json" };
-          
-          // Only pass Authorization header tokens when interacting with explicit non-local cloud deployments
-          if (!isLocal && settings.API_KEY) {
+          if (!isLocalTarget && settings.API_KEY) {
             headers["Authorization"] = `Bearer ${settings.API_KEY}`;
           }
+          console.log("Outbound Headers Configuration:", headers);
 
           try {
+            console.log("Sending fetch request now...");
             const response = await fetch(universalUrl, {
               method: "POST",
               headers: headers,
               body: JSON.stringify(openAiPayload),
             });
 
+            console.log("Response received! Status code:", response.status, response.statusText);
+
             if (!response.ok) {
               const errorText = await response.text();
+              console.error("Server rejected request. Body response:", errorText);
               throw new Error(`HTTP Error: ${response.status} ${response.statusText} - ${errorText}`);
             }
 
             const result = await response.json();
+            console.log("Successfully parsed JSON response:", result);
+
             if (result.choices?.[0]?.message?.content) {
               return result.choices[0].message.content;
             } else if (result.response) {
@@ -2015,10 +2041,12 @@
               throw new Error("Unexpected API JSON structure returned.");
             }
           } catch (err) {
-            console.error("Universal endpoint call failed:", err);
+            console.error("Universal endpoint block caught failure:", err);
             throw err;
           }
         }
+        
+        
         
         
         
